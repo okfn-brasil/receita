@@ -1,0 +1,8 @@
+-r requirements.in
+
+black
+coverage
+flake8
+isort
+pip-tools
+pre-commit
