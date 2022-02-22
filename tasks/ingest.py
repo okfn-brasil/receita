@@ -41,7 +41,7 @@ mapeamento_nome_campos = {
 }
 
 # Pegar a lista de todos os nomes de arquivo .zip que tenham uma referência à string "nome_arquivo"
-def pegar_lista_zip(str: nome_arquivo):
+def pegar_lista_zip(nome_arquivo: str):
     zip_files = glob.glob(r"../data/*.zip")
     # Remove todos os arquivos que não tenham relação com a tabela selecionada para a carga
     for f in zip_files:
@@ -52,7 +52,7 @@ def pegar_lista_zip(str: nome_arquivo):
 
 # Descompactar um arquivo .zip da tabela a partir da string com referência completa ao diretório e nome do arquivo
 # Retorna True caso realize a descompressão com sucesso e False, caso contrário/
-def descomprimir_zip(str: caminho_nome_zip):
+def descomprimir_zip(caminho_nome_zip: str):
     try:
         with ZipFile(caminho_nome_zip, 'r') as arquivo:
             # Extrair no mesmo diretório data
@@ -65,7 +65,7 @@ def descomprimir_zip(str: caminho_nome_zip):
 # i. Carregar em memória os dados do .csv (EXTRACT) usando o pandas e sqlalchemy
 # A referência ao arquivo .csv é a string caminho_nome_arquivo, tabela é a chave da tabela em que será inserida
 # Retorna True caso a operação realize o registro dos dados no banco e False caso contrário
-def carregar_dados(str: caminho_nome_arquivo, str: tabela):
+def carregar_dados(caminho_nome_arquivo: str, tabela: str):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
         data_frame = pd.read_csv(caminho_nome_arquivo, names=campos_selecionados)
