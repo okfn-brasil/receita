@@ -8,7 +8,7 @@
 
 import glob
 from zipfile import ZipFile
-import pandas
+import pandas as pd
 from sqlalchemy import create_engine
 
 # Mapeamento  entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
@@ -68,7 +68,7 @@ def descomprimir_zip(caminho_nome_zip: str):
 def carregar_dados(caminho_nome_arquivo: str, tabela: str):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
-        data_frame = pd.read_csv(caminho_nome_arquivo, names=campos_selecionados)
+        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados)
         if data_frame is not None:
             # Instantiate sqlachemy.create_engine object
             sql_engine = None
