@@ -108,7 +108,7 @@ def ingest_datasets():
                     # Carregar o csv em memória
                     try:
                         # O arquivo .csv extraído tem o mesmo nome do zip sem a extensão. Adicionando o diretório de dados ao caminho relativo
-                        arquivo_csv = '../data/' + arquivo_zip.replace('.zip', '')
+                        arquivo_csv = arquivo_zip.replace('.zip', '')
                         # Carregar o .csv  em memória e persistir as linhas no banco de dados, usando sqlalchemy
                         sucesso = carregar_dados(arquivo_csv, chave)
                         if sucesso:
@@ -118,7 +118,7 @@ def ingest_datasets():
                     except:
                         print(f'Erro de carga do .csv em memória')
         except:
-            print(f'Erro na busca de arquivos zip para a tabela {key}')
+            print(f'Erro na busca de arquivos zip para a tabela {chave}')
     pass
 
 # Set hook for main execution flow to the ingest_datasets method
