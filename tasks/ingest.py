@@ -10,6 +10,8 @@ import glob
 from zipfile import ZipFile
 import pandas as pd
 from sqlalchemy import create_engine
+import sys
+import psycopg2
 
 # Mapeamento  entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
 mapeamento_tabelas_zip = {
@@ -68,14 +70,14 @@ def descomprimir_zip(caminho_nome_zip: str):
 def carregar_dados(caminho_nome_arquivo: str, tabela: str):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
-        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados)
+        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn')
         if data_frame is not None:
             # Instantiate sqlachemy.create_engine object
             sql_engine = None
             try:
                 sql_engine = create_engine('postgresql://postgres:q7Muz4W5iI9@localhost:5432/qd_receita')
             except:
-                print(f'Erro de conexão via SQLAlchemy.')
+                print(f'Erro de conexão via SQLAlchemy: {sys.exc_info()}')
             # Salva no banco de dados os registros:
             if sql_engine is not None:
                 try:
@@ -85,7 +87,8 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str):
                 except:
                     print(f'Erro ao salvar os dados na tabela {tabela}')
     except:
-        print(f'Erro de carga do .CSV em memória via pandas')
+        exc_info = sys.exc_info()
+        print(f'Erro de carga do .CSV em memória via pandas: {exc_info}')
 
     return False
 
@@ -116,9 +119,10 @@ def ingest_datasets():
                         else:
                             print(f'Erro na carga do arquivo {arquivo_csv}')
                     except:
-                        print(f'Erro de carga do .csv em memória')
+                        exc_info = sys.exc_info()
+                        print(f'Erro de carga do .csv em memória: {exc_info}')
         except:
-            print(f'Erro na busca de arquivos zip para a tabela {chave}')
+            print(f'Erro na busca de arquivos zip para a tabela {chave}: \n \t{sys.exc_info()}')
     pass
 
 # Set hook for main execution flow to the ingest_datasets method
