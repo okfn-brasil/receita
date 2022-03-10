@@ -73,7 +73,7 @@ def descomprimir_zip(caminho_nome_zip: str):
 def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
-        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', chunksize=5000)
+        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn')
         if data_frame is not None:
             # Salva no banco de dados os registros:
             if sql_engine is not None:
@@ -116,7 +116,7 @@ def carregar_tabela(caminho_arquivo, nome_tabela, nome_db, host, porta, user, pw
             cur.execute("Truncate {} Cascade;".format(nome_tabela))
             print(f'Truncated {nome_tabela}')
             # Load table from the file without HEADER
-            cur.copy_expert("copy {} from STDIN CSV QUOTE '\"'".format(nome_tabela), f)
+            cur.copy_expert("copy {} from STDIN CSV QUOTE '\"' DELIMITER ';'".format(nome_tabela), f)
             cur.execute("commit;")
             print("Loaded data into {}".format(nome_tabela))
             conn.close()
@@ -158,7 +158,7 @@ def ingest_datasets():
                         arquivo_csv = arquivo_zip.replace('.zip', '')
                         # Carregar o .csv  em memória e persistir as linhas no banco de dados, usando sqlalchemy
                         sucesso = carregar_dados(arquivo_csv, chave, sql_engine)
-                        # sucesso = carregar_tabela('arquivo_csv', chave, 'qd_receita', 'localhost', '5432', postgres, 'pwd)
+                        # sucesso = carregar_tabela(arquivo_csv, chave, 'qd_receita', 'localhost', '5432', 'postgres', pwd)
                         print(f'A carga dos dados demorou {(time.time() - start_time)} segundos.')
                         if sucesso:
                             print(f'Registros carregados com sucesso para o arquivo {arquivo_csv}')
