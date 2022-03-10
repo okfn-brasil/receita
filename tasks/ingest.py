@@ -12,6 +12,8 @@ import pandas as pd
 from sqlalchemy import create_engine
 import sys
 import psycopg2
+import time
+from sqlalchemy import event
 
 # Mapeamento  entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
 mapeamento_tabelas_zip = {
@@ -45,12 +47,13 @@ mapeamento_nome_campos = {
 # Pegar a lista de todos os nomes de arquivo .zip que tenham uma referência à string "nome_arquivo"
 def pegar_lista_zip(nome_arquivo: str):
     zip_files = glob.glob(r"../data/*.zip")
+    itens_tabela = []
     # Remove todos os arquivos que não tenham relação com a tabela selecionada para a carga
     for f in zip_files:
-        if nome_arquivo not in f:
-            zip_files.remove(f)
+        if nome_arquivo in f:
+            itens_tabela.append(f)
     # Retorna a lista completa de arquivos .zip da tabela
-    return zip_files
+    return itens_tabela
 
 # Descompactar um arquivo .zip da tabela a partir da string com referência completa ao diretório e nome do arquivo
 # Retorna True caso realize a descompressão com sucesso e False, caso contrário/
@@ -67,22 +70,17 @@ def descomprimir_zip(caminho_nome_zip: str):
 # i. Carregar em memória os dados do .csv (EXTRACT) usando o pandas e sqlalchemy
 # A referência ao arquivo .csv é a string caminho_nome_arquivo, tabela é a chave da tabela em que será inserida
 # Retorna True caso a operação realize o registro dos dados no banco e False caso contrário
-def carregar_dados(caminho_nome_arquivo: str, tabela: str):
+def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
         data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn')
         if data_frame is not None:
-            # Instantiate sqlachemy.create_engine object
-            sql_engine = None
-            try:
-                sql_engine = create_engine('postgresql://postgres:q7Muz4W5iI9@localhost:5432/qd_receita')
-            except:
-                print(f'Erro de conexão via SQLAlchemy: {sys.exc_info()}')
             # Salva no banco de dados os registros:
             if sql_engine is not None:
                 try:
                     # iii. Inserir na tabela apropriada do banco de dados qd_receita os registros extraídos dos arquivos .csv (LOAD)
-                    data_frame.to_sql(tabela, sql_engine, index=False, if_exists='replace', chunksize=5000)
+                    total_records_updated = data_frame.to_sql(tabela, sql_engine, index=False, if_exists='replace', chunksize=5000, method='multi')
+                    print(f'{total_records_updated} registros salvos na tabela {tabela}')
                     return True
                 except:
                     print(f'Erro ao salvar os dados na tabela {tabela}')
@@ -94,26 +92,41 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str):
 
 # Fluxo de execução principal do programa
 def ingest_datasets():
+    # Instantiate sqlachemy.create_engine object
+    sql_engine = None
+    try:
+        sql_engine = create_engine('postgresql://postgres:q7Muz4W5iI9@localhost:5432/qd_receita')
+        print(f'Sql engine loaded {sql_engine}')
+
+    except:
+        print(f'Erro de conexão via SQLAlchemy: {sys.exc_info()}')
+
     # Para cada tabela/tema (ex.: socio, estabelecimento, cnae, empresa, etc.):
-    for chave in mapeamento_tabelas_zip.keys():
+    for chave in sorted(mapeamento_tabelas_zip.keys(), key=str.lower):
         print(f'Carregando dados para a tabela {chave}')
         try:
             # Pegar lista de nomes de arquivos .zip relacionados à tabela
             lista_zip = pegar_lista_zip(mapeamento_tabelas_zip[chave])
+            lista_zip = sorted(lista_zip, key=str.lower, reverse=True)
+            print(f'Lista de arquivos para a tabela: \n {lista_zip}')
             for arquivo_zip in lista_zip:
                 # Descompactar os arquivos .zip da tabela
                 descomprimiu = False
                 try:
+                    print(f'Descomprinindo arquivo {arquivo_zip}')
                     descomprimiu = descomprimir_zip(f'../data/{arquivo_zip}')
                 except:
                     print(f'Erro de descompressão do arquivo {arquivo_zip}')
                 if descomprimiu:
                     # Carregar o csv em memória
                     try:
+                        start_time = time.time()
+                        print(f'Arquivo {arquivo_zip} descomprimido com sucesso. Carregando para a tabela no banco de dados...')
                         # O arquivo .csv extraído tem o mesmo nome do zip sem a extensão. Adicionando o diretório de dados ao caminho relativo
                         arquivo_csv = arquivo_zip.replace('.zip', '')
                         # Carregar o .csv  em memória e persistir as linhas no banco de dados, usando sqlalchemy
-                        sucesso = carregar_dados(arquivo_csv, chave)
+                        sucesso = carregar_dados(arquivo_csv, chave, sql_engine)
+                        print(f'A carga dos dados demorou {(time.time() - start_time)} segundos.')
                         if sucesso:
                             print(f'Registros carregados com sucesso para o arquivo {arquivo_csv}')
                         else:
@@ -121,6 +134,7 @@ def ingest_datasets():
                     except:
                         exc_info = sys.exc_info()
                         print(f'Erro de carga do .csv em memória: {exc_info}')
+            print(f'Fim da carga dos arquivos CSV para a chave {chave}')
         except:
             print(f'Erro na busca de arquivos zip para a tabela {chave}: \n \t{sys.exc_info()}')
     pass
