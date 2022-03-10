@@ -73,7 +73,7 @@ def descomprimir_zip(caminho_nome_zip: str):
 def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
-        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn')
+        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', chunksize=50000)
         if data_frame is not None:
             # Salva no banco de dados os registros:
             if sql_engine is not None:
@@ -89,6 +89,38 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
         print(f'Erro de carga do .CSV em memória via pandas: {exc_info}')
 
     return False
+
+def carregar_tabela(caminho_arquivo, nome_tabela, nome_db, host, porta, user, pwd):
+    '''
+    This function uploads csv to a target table
+    '''
+    conn, cur = None, None
+    try:
+        conn = psycopg2.connect(dbname=nome_db, host=host, port=porta, user=user, password=pwd)
+        conn.autocommit = True
+        print("Conectado ao BD com sucesso.")
+    except Exception as e:
+        print("Erro de conexão ao banco de dados: {}".format(str(e)))
+        sys.exit(1)
+    if conn is not None:
+        f = None
+        try:
+            f = open(caminho_arquivo, "r")
+            print(f'Abriu o arquivo: {caminho_arquivo}')
+        except Exception as e:
+            print("Erro de abertura do arquivo: {}".format(str(e)))
+            sys.exit(1)
+        if f is not None:
+            cur = conn.cursor()
+            # Truncate the table first
+            cur.execute("Truncate {} Cascade;".format(nome_tabela))
+            print(f'Truncated {nome_tabela}')
+            # Load table from the file without HEADER
+            cur.copy_expert("copy {} from STDIN CSV QUOTE '\"'".format(nome_tabela), f)
+            cur.execute("commit;")
+            print("Loaded data into {}".format(nome_tabela))
+            conn.close()
+            print("Conexão com o banco fechada.")
 
 # Fluxo de execução principal do programa
 def ingest_datasets():
@@ -126,6 +158,7 @@ def ingest_datasets():
                         arquivo_csv = arquivo_zip.replace('.zip', '')
                         # Carregar o .csv  em memória e persistir as linhas no banco de dados, usando sqlalchemy
                         sucesso = carregar_dados(arquivo_csv, chave, sql_engine)
+                        # sucesso = carregar_tabela('arquivo_csv', chave, 'qd_receita', 'localhost', '5432', postgres, 'pwd)
                         print(f'A carga dos dados demorou {(time.time() - start_time)} segundos.')
                         if sucesso:
                             print(f'Registros carregados com sucesso para o arquivo {arquivo_csv}')
