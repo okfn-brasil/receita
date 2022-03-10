@@ -73,7 +73,7 @@ def descomprimir_zip(caminho_nome_zip: str):
 def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
-        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', chunksize=50000)
+        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', chunksize=5000)
         if data_frame is not None:
             # Salva no banco de dados os registros:
             if sql_engine is not None:
@@ -82,8 +82,8 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
                     total_records_updated = data_frame.to_sql(tabela, sql_engine, index=False, if_exists='replace', chunksize=5000, method='multi')
                     print(f'{total_records_updated} registros salvos na tabela {tabela}')
                     return True
-                except:
-                    print(f'Erro ao salvar os dados na tabela {tabela}')
+                except Exception as e:
+                    print(f'Erro {e} ao salvar os dados na tabela {tabela}')
     except:
         exc_info = sys.exc_info()
         print(f'Erro de carga do .CSV em memória via pandas: {exc_info}')
