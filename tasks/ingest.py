@@ -73,17 +73,22 @@ def descomprimir_zip(caminho_nome_zip: str):
 def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
-        data_frame = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn')
-        if data_frame is not None:
-            # Salva no banco de dados os registros:
-            if sql_engine is not None:
-                try:
-                    # iii. Inserir na tabela apropriada do banco de dados qd_receita os registros extraídos dos arquivos .csv (LOAD)
-                    total_records_updated = data_frame.to_sql(tabela, sql_engine, index=False, if_exists='replace', chunksize=5000, method='multi')
-                    print(f'{total_records_updated} registros salvos na tabela {tabela}')
-                    return True
-                except Exception as e:
-                    print(f'Erro {e} ao salvar os dados na tabela {tabela}')
+        chunk_df = None
+        chunk_size = 250_000
+        with pd.read_csv(caminho_nome_arquivo, chunksize=chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
+            for chunk in csv_reader:
+                print(f'Carregando dataframe {chunk}.')
+                # Salva no banco de dados os registros:
+                if sql_engine is not None:
+                    try:
+                        #import pdb; pdb.set_trace()
+                        # iii. Inserir na tabela apropriada do banco de dados qd_receita os registros extraídos dos arquivos .csv (LOAD)
+                        print(f'Salvando os registros na tabela {tabela}')
+                        total_records_updated = chunk.to_sql(tabela, sql_engine, index=False, if_exists='append', chunksize=50_000, method='multi')
+                        print(f'{total_records_updated} registros salvos na tabela {tabela}')
+                    except Exception as e:
+                        print(f'Erro {e} ao salvar os dados na tabela {tabela}')
+        return True
     except:
         exc_info = sys.exc_info()
         print(f'Erro de carga do .CSV em memória via pandas: {exc_info}')
@@ -127,19 +132,19 @@ def ingest_datasets():
     # Instantiate sqlachemy.create_engine object
     sql_engine = None
     try:
-        sql_engine = create_engine('postgresql://postgres:q7Muz4W5iI9@localhost:5432/qd_receita')
+        sql_engine = create_engine('postgresql://postgres:q7Muz4W5iI9@localhost:5432/qd_receita', isolation_level="AUTOCOMMIT")
         print(f'Sql engine loaded {sql_engine}')
 
     except:
         print(f'Erro de conexão via SQLAlchemy: {sys.exc_info()}')
 
     # Para cada tabela/tema (ex.: socio, estabelecimento, cnae, empresa, etc.):
-    for chave in sorted(mapeamento_tabelas_zip.keys(), key=str.lower):
+    for chave in sorted(mapeamento_tabelas_zip.keys(), key=str.lower, reverse=False):
         print(f'Carregando dados para a tabela {chave}')
         try:
             # Pegar lista de nomes de arquivos .zip relacionados à tabela
             lista_zip = pegar_lista_zip(mapeamento_tabelas_zip[chave])
-            lista_zip = sorted(lista_zip, key=str.lower, reverse=True)
+            lista_zip = sorted(lista_zip, key=str.lower, reverse=False)
             print(f'Lista de arquivos para a tabela: \n {lista_zip}')
             for arquivo_zip in lista_zip:
                 # Descompactar os arquivos .zip da tabela
