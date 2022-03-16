@@ -14,6 +14,7 @@ import sys
 import psycopg2
 import time
 from sqlalchemy import event
+from concurrent.futures import ThreadPoolExecutor
 
 # Mapeamento  entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
 mapeamento_tabelas_zip = {
@@ -74,18 +75,24 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
         chunk_df = None
-        chunk_size = 250_000
+        chunk_size = 10_000
         with pd.read_csv(caminho_nome_arquivo, chunksize=chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
             for chunk in csv_reader:
-                print(f'Carregando dataframe {chunk}.')
+                #print(f'Carregando dataframe {chunk}.')
                 # Salva no banco de dados os registros:
                 if sql_engine is not None:
                     try:
                         #import pdb; pdb.set_trace()
                         # iii. Inserir na tabela apropriada do banco de dados qd_receita os registros extraídos dos arquivos .csv (LOAD)
                         print(f'Salvando os registros na tabela {tabela}')
-                        total_records_updated = chunk.to_sql(tabela, sql_engine, index=False, if_exists='append', chunksize=50_000, method='multi')
-                        print(f'{total_records_updated} registros salvos na tabela {tabela}')
+                        start_insert = time.time()
+                        total_records_updated = chunk.to_sql(tabela, sql_engine, index=False, if_exists='append', chunksize=chunk_size, method='multi')
+                        end_insert = time.time() - start_insert
+                        if end_insert < 60:
+                            print(f'{total_records_updated} registros salvos na tabela {tabela} em {end_insert} segundos')
+                        else:
+                            minutes = round(end_insert/60)
+                            print(f'{total_records_updated} registros salvos na tabela {tabela} em {minutes} minutos')
                     except Exception as e:
                         print(f'Erro {e} ao salvar os dados na tabela {tabela}')
         return True
@@ -161,8 +168,17 @@ def ingest_datasets():
                         print(f'Arquivo {arquivo_zip} descomprimido com sucesso. Carregando para a tabela no banco de dados...')
                         # O arquivo .csv extraído tem o mesmo nome do zip sem a extensão. Adicionando o diretório de dados ao caminho relativo
                         arquivo_csv = arquivo_zip.replace('.zip', '')
+                        # Implementação multi-thread
+                        t1 = time.time()
+                        with ThreadPoolExecutor(max_workers=3) as processPool:
+                            future_result = processPool.submit(carregar_dados, arquivo_csv, chave, sql_engine)
+                            sucesso = future_result.result()
+                            print(f'Resultado: {sucesso}')
+                            t2 = time.time()
+                            tt = t2 - t1
+                            print(f'Demorou {tt} segundos')
                         # Carregar o .csv  em memória e persistir as linhas no banco de dados, usando sqlalchemy
-                        sucesso = carregar_dados(arquivo_csv, chave, sql_engine)
+                        # sucesso = carregar_dados(arquivo_csv, chave, sql_engine)
                         # sucesso = carregar_tabela(arquivo_csv, chave, 'qd_receita', 'localhost', '5432', 'postgres', pwd)
                         print(f'A carga dos dados demorou {(time.time() - start_time)} segundos.')
                         if sucesso:
@@ -171,7 +187,7 @@ def ingest_datasets():
                             print(f'Erro na carga do arquivo {arquivo_csv}')
                     except:
                         exc_info = sys.exc_info()
-                        print(f'Erro de carga do .csv em memória: {exc_info}')
+                        print(f'Erro de carga do .csv em memória: \n{exc_info}')
             print(f'Fim da carga dos arquivos CSV para a chave {chave}')
         except:
             print(f'Erro na busca de arquivos zip para a tabela {chave}: \n \t{sys.exc_info()}')
