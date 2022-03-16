@@ -75,26 +75,34 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
         chunk_df = None
-        chunk_size = 10_000
-        with pd.read_csv(caminho_nome_arquivo, chunksize=chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
-            for chunk in csv_reader:
-                #print(f'Carregando dataframe {chunk}.')
-                # Salva no banco de dados os registros:
-                if sql_engine is not None:
-                    try:
-                        #import pdb; pdb.set_trace()
-                        # iii. Inserir na tabela apropriada do banco de dados qd_receita os registros extraídos dos arquivos .csv (LOAD)
-                        print(f'Salvando os registros na tabela {tabela}')
-                        start_insert = time.time()
-                        total_records_updated = chunk.to_sql(tabela, sql_engine, index=False, if_exists='append', chunksize=chunk_size, method='multi')
-                        end_insert = time.time() - start_insert
-                        if end_insert < 60:
-                            print(f'{total_records_updated} registros salvos na tabela {tabela} em {end_insert} segundos')
-                        else:
-                            minutes = round(end_insert/60)
-                            print(f'{total_records_updated} registros salvos na tabela {tabela} em {minutes} minutos')
-                    except Exception as e:
-                        print(f'Erro {e} ao salvar os dados na tabela {tabela}')
+        read_chunk_size = 100_000
+        write_chunk_size = 10_000
+        # Passo intermediário para pegar o número total de itens do .csv
+        aux_df = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None)
+        # Se o dataframe possui registros válidos, prossegue
+        if aux_df:
+            n_itens_csv = aux_df.shape[0]
+            # release reference to aux_df to allow garbage collector to clear from memory once it is big and csv_reader in chunks is more convenient to work
+            del aux_df
+            with pd.read_csv(caminho_nome_arquivo, chunksize=write_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
+                for chunk in csv_reader:
+                    #print(f'Carregando dataframe {chunk}.')
+                    # Salva no banco de dados os registros:
+                    if sql_engine is not None:
+                        try:
+                            #import pdb; pdb.set_trace()
+                            # iii. Inserir na tabela apropriada do banco de dados qd_receita os registros extraídos dos arquivos .csv (LOAD)
+                            print(f'Salvando os registros na tabela {tabela}')
+                            start_insert = time.time()
+                            total_records_updated = chunk.to_sql(tabela, sql_engine, index=False, if_exists='append', chunksize=chunk_size, method='multi')
+                            end_insert = time.time() - start_insert
+                            if end_insert < 60:
+                                print(f'{total_records_updated} registros de um total de {n_itens_csv} foram salvos na tabela *{tabela}* em {end_insert} segundos')
+                            else:
+                                minutes = round(end_insert/60)
+                                print(f'{total_records_updated} registros de um total de {n_itens_csv} foram salvos na tabela *{tabela}* em {minutes} minutos')
+                        except Exception as e:
+                            print(f'Erro {e} ao salvar os dados na tabela {tabela}')
         return True
     except:
         exc_info = sys.exc_info()
