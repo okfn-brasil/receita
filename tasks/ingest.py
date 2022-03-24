@@ -15,6 +15,7 @@ import psycopg2
 import time
 from sqlalchemy import event
 from concurrent.futures import ThreadPoolExecutor
+import StringIO
 
 # Mapeamento  entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
 mapeamento_tabelas_zip = {
@@ -123,33 +124,59 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
 
 def carregar_tabela(caminho_arquivo, nome_tabela, nome_db, host, porta, user, pwd):
     '''
-    This function uploads csv to a target table
+    This function uploads csv to a target table using copy_from
     '''
-    conn, cur = None, None
+    # Conexão com o Banco
+    conn = None
+    # Stream StreamIO
+    sio = None
     try:
         conn = psycopg2.connect(dbname=nome_db, host=host, port=porta, user=user, password=pwd)
-        conn.autocommit = True
+        # conn.autocommit = True
         print("Conectado ao BD com sucesso.")
     except Exception as e:
         print("Erro de conexão ao banco de dados: {}".format(str(e)))
         sys.exit(1)
-    if conn is not None:
-        f = None
-        try:
-            f = open(caminho_arquivo, "r")
-            print(f'Abriu o arquivo: {caminho_arquivo}')
-        except Exception as e:
-            print("Erro de abertura do arquivo: {}".format(str(e)))
-            sys.exit(1)
-        if f is not None:
-            cur = conn.cursor()
-            # Truncate the table first
-            cur.execute("Truncate {} Cascade;".format(nome_tabela))
-            print(f'Truncated {nome_tabela}')
-            # Load table from the file without HEADER
-            cur.copy_expert("copy {} from STDIN CSV QUOTE '\"' DELIMITER ';'".format(nome_tabela), f)
-            cur.execute("commit;")
-            print("Loaded data into {}".format(nome_tabela))
+    campos_selecionados = mapeamento_nome_campos[tabela]
+    try:
+        read_chunk_size = 100_000
+        write_chunk_size = 15_000
+        # Total de itens a serem carregados do arquivo csv
+        n_items_csv = 0
+        # Total de itens já salvos no banco de dados
+        n_carregados = 0
+        # Passo intermediário para pegar o número total de itens do .csv
+        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
+            for chunk in csv_reader:
+                n_items_csv = n_items_csv + int(chunk.shape[0])
+            print(f'Total de {n_items_csv} a serem carregados em memória')
+        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
+            for chunk in csv_reader:
+                try:
+                    sio = StringIO()
+                    writer = csv.writer(sio)
+                    writer.writerows(chunk.values)
+                    sio.seek(0)
+                except Exception as e:
+                    print("Erro objeto de escrita StringIO: {}".format(str(e)))
+                    sys.exit(1)
+
+                if sio is not None:
+                    # Grava no banco
+                    try:
+                        with conn.cursor() as c:
+                            copy_from_response = c.copy_from(
+                                file=sio,
+                                table=nome_tabela,
+                                columns=campos_selecionados,
+                                sep=";"
+                            )
+                            print(f'Copy from response: {copy_from_response}')
+                            commit_response = conn.commit()
+                            print(f'Commit response: {commit_response}')
+                    except Exception as e:
+                        print("Erro de escrita no banco de dados: {}".format(str(e)))
+                        sys.exit(1)
             conn.close()
             print("Conexão com o banco fechada.")
 
