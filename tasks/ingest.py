@@ -68,42 +68,53 @@ def descomprimir_zip(caminho_nome_zip: str):
         print(f'Erro de descompressão do arquivo {caminho_nome_zip}')
     return False
 
+# Realiza uma regra de três para calcular a porcentagem de andamento da carga dos dados
+def status_carga(parcial: int, total: int):
+    x = (parcial * 100 ) / total
+    # Arrendondando os valores
+    x = round(x)
+    return str(x)
+
 # i. Carregar em memória os dados do .csv (EXTRACT) usando o pandas e sqlalchemy
 # A referência ao arquivo .csv é a string caminho_nome_arquivo, tabela é a chave da tabela em que será inserida
 # Retorna True caso a operação realize o registro dos dados no banco e False caso contrário
 def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
-        chunk_df = None
         read_chunk_size = 100_000
-        write_chunk_size = 10_000
+        write_chunk_size = 15_000
+        # Total de itens a serem carregados do arquivo csv
+        n_items_csv = 0
+        # Total de itens já salvos no banco de dados
+        n_carregados = 0
         # Passo intermediário para pegar o número total de itens do .csv
-        aux_df = pd.read_csv(caminho_nome_arquivo, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None)
-        # Se o dataframe possui registros válidos, prossegue
-        if aux_df:
-            n_itens_csv = aux_df.shape[0]
-            # release reference to aux_df to allow garbage collector to clear from memory once it is big and csv_reader in chunks is more convenient to work
-            del aux_df
-            with pd.read_csv(caminho_nome_arquivo, chunksize=write_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
-                for chunk in csv_reader:
-                    #print(f'Carregando dataframe {chunk}.')
-                    # Salva no banco de dados os registros:
-                    if sql_engine is not None:
-                        try:
-                            #import pdb; pdb.set_trace()
-                            # iii. Inserir na tabela apropriada do banco de dados qd_receita os registros extraídos dos arquivos .csv (LOAD)
-                            print(f'Salvando os registros na tabela {tabela}')
-                            start_insert = time.time()
-                            total_records_updated = chunk.to_sql(tabela, sql_engine, index=False, if_exists='append', chunksize=chunk_size, method='multi')
-                            end_insert = time.time() - start_insert
-                            if end_insert < 60:
-                                print(f'{total_records_updated} registros de um total de {n_itens_csv} foram salvos na tabela *{tabela}* em {end_insert} segundos')
-                            else:
-                                minutes = round(end_insert/60)
-                                print(f'{total_records_updated} registros de um total de {n_itens_csv} foram salvos na tabela *{tabela}* em {minutes} minutos')
-                        except Exception as e:
-                            print(f'Erro {e} ao salvar os dados na tabela {tabela}')
-        return True
+        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
+            for chunk in csv_reader:
+                n_items_csv = n_items_csv + int(chunk.shape[0])
+            print(f'Total de {n_items_csv} a serem carregados em memória')
+        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
+            for chunk in csv_reader:
+                # Salva no banco de dados os registros:
+                if sql_engine is not None:
+                    try:
+                        # iii. Inserir na tabela apropriada do banco de dados qd_receita os registros extraídos dos arquivos .csv (LOAD)
+                        print(f'Salvando os registros na tabela {tabela}')
+                        start_insert = time.time()
+                        total_records_updated = chunk.to_sql(tabela, sql_engine, index=False, if_exists='append', chunksize=write_chunk_size, method='multi')
+                        # Incrementa pro monitor de desempenho da carga
+                        n_carregados = n_carregados + total_records_updated
+                        porcentagem = status_carga(n_carregados, n_items_csv)
+                        end_insert = time.time() - start_insert
+                        if end_insert < 60:
+                            print(f'{total_records_updated} registros de um total de {n_items_csv} foram salvos na tabela *{tabela}* em {end_insert} segundos. {n_carregados} carregados ({porcentagem}%).')
+                        else:
+                            minutes = round(end_insert/60)
+                            print(f'{total_records_updated} registros de um total de {n_items_csv} foram salvos na tabela *{tabela}* em {minutes} minutos. {n_carregados} carregados ({porcentagem}%).')
+                    except Exception as e:
+                        print(f'Erro {e} ao salvar os dados na tabela {tabela}')
+            porcentagem = status_carga(n_carregados, n_items_csv)
+            print(f'Foram salvos {n_carregados} de um total de {n_items_csv} ({porcentagem}).')
+            return True
     except:
         exc_info = sys.exc_info()
         print(f'Erro de carga do .CSV em memória via pandas: {exc_info}')
