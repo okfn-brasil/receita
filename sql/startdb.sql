@@ -15,13 +15,13 @@ create table empresa (
 	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
 	qualificacao_do_responsavel INT,
 	-- CAPITAL SOCIAL DA EMPRESA
-	capital_social REAL,
+	capital_social VARCHAR(3),
 	-- CÓDIGO DO PORTE DA EMPRESA:
 		-- 00 - NÃO INFORMADO
 		-- 01 - MICRO EMPRESA
 		-- 03 - EMPRESA DE PEQUENO PORTE
 		-- 05 - DEMAIS
-	porte INT,
+	porte VARCHAR,
 	-- O ENTE FEDERATIVO RESPONSÁVEL É PREENCHIDO PARA OS CASOS DE ÓRGÃOS E ENTIDADES DO GRUPO DE NATUREZA JURÍDICA 1XXX.
 	-- PARA AS DEMAIS NATUREZAS, ESTE ATRIBUTO FICA EM BRANCO.
 	ente_federativo_responsavel VARCHAR
@@ -41,7 +41,7 @@ create table estabelecimento (
 	-- CÓDIGO DO IDENTIFICADOR MATRIZ/FILIAL:
 		-- 1 - MATRIZ
 		-- 2 - FILIAL
-	identificador_matriz_filial INT,
+	identificador_matriz_filial CHAR,
 	-- CORRESPONDE AO NOME FANTASIA
 	nome_fantasia VARCHAR,
 	-- CÓDIGO DA SITUAÇÃO CADASTRAL:
@@ -50,21 +50,21 @@ create table estabelecimento (
 		-- 3 - SUSPENSA
 		-- 4 - INAPTA
 		-- 08 - BAIXADA
-	situacao_cadastral INT,
+	situacao_cadastral VARCHAR(2),
 	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
 	data_situacao_cadastral VARCHAR(10),
 	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
-	motivo_situacao_cadastral INT,
+	motivo_situacao_cadastral VARCHAR(5),
 	-- NOME DA CIDADE NO EXTERIOR
 	nome_cidade_exterior VARCHAR,
 	-- CÓDIGO DO PAIS
-	pais INT,
+	pais VARCHAR(10),
 	-- DATA DE INÍCIO DA ATIVIDADE
 	data_inicio_atividade VARCHAR(10),
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA PRINCIPAL DO ESTABELECIMENTO
-	cnae_fiscal INT,
+	cnae_fiscal VARCHAR,
 	-- CÓDIGO DA(S) ATIVIDADE(S) ECONÔMICA(S) SECUNDÁRIA(S) DO ESTABELECIMENTO
-	cnae_fiscal_secundario INT,
+	cnae_fiscal_secundario VARCHAR,
 	-- DESCRIÇÃO DO TIPO DE LOGRADOURO
 	tipo_logradouro VARCHAR,
 	-- NOME DO LOGRADOURO ONDE SE LOCALIZA O ESTABELECIMENTO.
@@ -76,9 +76,9 @@ create table estabelecimento (
 	-- BAIRRO ONDE SE LOCALIZA O ESTABELECIMENTO.
 	bairro VARCHAR,
 	-- CÓDIGO DE ENDEREÇAMENTO POSTAL REFERENTE AO LOGRADOURO NO QUAL O ESTABELECIMENTO ESTA LOCALIZADO
-	cep INT,
+	cep VARCHAR(9),
 	-- SIGLA DA UNIDADE DA FEDERAÇÃO EM QUE SE ENCONTRA O ESTABELECIMENTO
-	uf VARCHAR,
+	uf VARCHAR(2),
 	-- CÓDIGO DO MUNICÍPIO DE JURISDIÇÃO ONDE SE ENCONTRA O ESTABELECIMENTO
 	municipio VARCHAR,
 	-- CONTÉM O DDD 1
@@ -135,24 +135,24 @@ create table socio (
 		-- 1 - PESSOA JURÍDICA
 		-- 2 - PESSOA FÍSICA
 		-- 3 - ESTRANGEIRO
-	identificador_socio INT,
+	identificador_socio VARCHAR(3),
 	-- NOME DO SÓCIO PESSOA FÍSICA OU A RAZÃO SOCIAL E/OU NOME EMPRESARIAL DA PESSOA JURÍDICA
 	-- E/OU NOME DO SÓCIO /RAZÃO SOCIAL DO SÓCIO ESTRANGEIRO
 	razao_social VARCHAR,
 	-- CPF OU CNPJ DO SÓCIO (SÓCIO ESTRANGEIRO NÃO TEM ESTA INFORMAÇÃO).
 	cnpj_cpf_socio VARCHAR(15),
 	-- CÓDIGO DA QUALIFICAÇÃO DO SÓCIO
-	codigo_qualificacao_socio INT,
+	codigo_qualificacao_socio VARCHAR(3),
 	-- DATA DE ENTRADA NA SOCIEDADE
 	data_entrada_sociedade VARCHAR(10),
 	-- CÓDIGO PAÍS DO SÓCIO ESTRANGEIRO
-	codigo_pais_socio_estrangeiro INT,
+	codigo_pais_socio_estrangeiro VARCHAR(3),,
 	-- NÚMERO DO CPF DO REPRESENTANTE LEGAL
-	numero_cpf_representante_legal INT,
+	numero_cpf_representante_legal VARCHAR(18),,
 	-- NOME DO REPRESENTANTE LEGAL
 	nome_representante_legal VARCHAR,
 	-- CÓDIGO DA QUALIFICAÇÃO DO REPRESENTANTE LEGAL
-	codigo_qualificacao_representante_legal INT,
+	codigo_qualificacao_representante_legal VARCHAR(3),
 	-- CÓDIGO CORRESPONDENTE À FAIXA ETÁRIA DO SÓCIO
 		-- 0 para não se aplica.
 		-- 1 para os intervalos entre 0 a 12 anos
@@ -164,7 +164,7 @@ create table socio (
 		-- 7 para os intervalos entre 61 a 70 anos
 		-- 8 para os intervalos entre 71 a 80 anos
 		-- 9 para maiores de 80 anos.
-	faixa_etaria INT(1)
+	faixa_etaria VARCHAR(10)
 );
 
 -----------------------------------------------------------------------------------------------------------------
