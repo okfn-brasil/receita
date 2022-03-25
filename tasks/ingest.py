@@ -15,7 +15,8 @@ import psycopg2
 import time
 from sqlalchemy import event
 from concurrent.futures import ThreadPoolExecutor
-import StringIO
+import io
+import csv
 
 # Mapeamento  entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
 mapeamento_tabelas_zip = {
@@ -122,7 +123,7 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
 
     return False
 
-def carregar_tabela(caminho_arquivo, nome_tabela, nome_db, host, porta, user, pwd):
+def carregar_tabela(caminho_nome_arquivo, nome_tabela, nome_db, host, porta, user, pwd):
     '''
     This function uploads csv to a target table using copy_from
     '''
@@ -137,7 +138,7 @@ def carregar_tabela(caminho_arquivo, nome_tabela, nome_db, host, porta, user, pw
     except Exception as e:
         print("Erro de conexão ao banco de dados: {}".format(str(e)))
         sys.exit(1)
-    campos_selecionados = mapeamento_nome_campos[tabela]
+    campos_selecionados = mapeamento_nome_campos[nome_tabela]
     try:
         read_chunk_size = 100_000
         write_chunk_size = 15_000
@@ -153,7 +154,7 @@ def carregar_tabela(caminho_arquivo, nome_tabela, nome_db, host, porta, user, pw
         with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
             for chunk in csv_reader:
                 try:
-                    sio = StringIO()
+                    sio = io.StringIO()
                     writer = csv.writer(sio)
                     writer.writerows(chunk.values)
                     sio.seek(0)
@@ -169,7 +170,7 @@ def carregar_tabela(caminho_arquivo, nome_tabela, nome_db, host, porta, user, pw
                                 file=sio,
                                 table=nome_tabela,
                                 columns=campos_selecionados,
-                                sep=";"
+                                sep=","
                             )
                             print(f'Copy from response: {copy_from_response}')
                             commit_response = conn.commit()
@@ -179,7 +180,10 @@ def carregar_tabela(caminho_arquivo, nome_tabela, nome_db, host, porta, user, pw
                         sys.exit(1)
             conn.close()
             print("Conexão com o banco fechada.")
-
+            return True
+    except:
+        print(f'Erro de abertura do arquivo CSV')
+    return False
 # Fluxo de execução principal do programa
 def ingest_datasets():
     # Instantiate sqlachemy.create_engine object
@@ -192,7 +196,8 @@ def ingest_datasets():
         print(f'Erro de conexão via SQLAlchemy: {sys.exc_info()}')
 
     # Para cada tabela/tema (ex.: socio, estabelecimento, cnae, empresa, etc.):
-    for chave in sorted(mapeamento_tabelas_zip.keys(), key=str.lower, reverse=False):
+    # for chave in sorted(mapeamento_tabelas_zip.keys(), key=str.lower, reverse=False):
+    for chave in ['socio']:
         print(f'Carregando dados para a tabela {chave}')
         try:
             # Pegar lista de nomes de arquivos .zip relacionados à tabela
@@ -217,7 +222,8 @@ def ingest_datasets():
                         # Implementação multi-thread
                         t1 = time.time()
                         with ThreadPoolExecutor(max_workers=3) as processPool:
-                            future_result = processPool.submit(carregar_dados, arquivo_csv, chave, sql_engine)
+                            #future_result = processPool.submit(carregar_dados, arquivo_csv, chave, sql_engine)
+                            future_result = processPool.submit(carregar_tabela, arquivo_csv, chave, 'qd_receita', 'localhost', '5432', 'postgres', 'q7Muz4W5iI9')
                             sucesso = future_result.result()
                             print(f'Resultado: {sucesso}')
                             t2 = time.time()
