@@ -189,9 +189,12 @@ def ingest_datasets():
     # Instantiate sqlachemy.create_engine object
     sql_engine = None
     try:
-        sql_engine = create_engine('postgresql://postgres:q7Muz4W5iI9@localhost:5432/qd_receita', isolation_level="AUTOCOMMIT")
-        print(f'Sql engine loaded {sql_engine}')
-
+        # Remember to set here
+        db_password = 'change your password here'
+        # Adding pass to the connection string
+        db_url =(f'postgresql://postgres:{db_password}@localhost:5432/qd_receita')
+        sql_engine = create_engine(db_url, isolation_level="AUTOCOMMIT")
+        print(f'Motor de acesso conectado com sucesso: {sql_engine}')
     except:
         print(f'Erro de conexão via SQLAlchemy: {sys.exc_info()}')
 
@@ -222,17 +225,26 @@ def ingest_datasets():
                         # Implementação multi-thread
                         t1 = time.time()
                         with ThreadPoolExecutor(max_workers=3) as processPool:
-                            #future_result = processPool.submit(carregar_dados, arquivo_csv, chave, sql_engine)
-                            future_result = processPool.submit(carregar_tabela, arquivo_csv, chave, 'qd_receita', 'localhost', '5432', 'postgres', 'q7Muz4W5iI9')
+                            future_result = processPool.submit(carregar_dados, arquivo_csv, chave, sql_engine)
+                            #future_result = processPool.submit(carregar_tabela, arquivo_csv, chave, 'qd_receita', 'localhost', '5432', 'postgres', change_password)
                             sucesso = future_result.result()
                             print(f'Resultado: {sucesso}')
                             t2 = time.time()
                             tt = t2 - t1
-                            print(f'Demorou {tt} segundos')
+                            if tt > 60:
+                                tt = round(tt/60)
+                                print(f'Demorou {tt} minutos')
+                            else:
+                                print(f'Demorou {tt} segundos')
                         # Carregar o .csv  em memória e persistir as linhas no banco de dados, usando sqlalchemy
                         # sucesso = carregar_dados(arquivo_csv, chave, sql_engine)
                         # sucesso = carregar_tabela(arquivo_csv, chave, 'qd_receita', 'localhost', '5432', 'postgres', pwd)
-                        print(f'A carga dos dados demorou {(time.time() - start_time)} segundos.')
+                        tempo_carga = (time.time() - start_time)
+                        if tempo_carga > 60:
+                            tempo_carga = round(tempo_carga/60)
+                            print(f'A carga dos dados demorou {tempo_carga} minutos.')
+                        else:
+                            print(f'A carga dos dados demorou {tempo_carga} segundos.')
                         if sucesso:
                             print(f'Registros carregados com sucesso para o arquivo {arquivo_csv}')
                         else:
