@@ -146,9 +146,9 @@ create table socio (
 	-- DATA DE ENTRADA NA SOCIEDADE
 	data_entrada_sociedade VARCHAR(10),
 	-- CÓDIGO PAÍS DO SÓCIO ESTRANGEIRO
-	codigo_pais_socio_estrangeiro VARCHAR(3),,
+	codigo_pais_socio_estrangeiro VARCHAR(3),
 	-- NÚMERO DO CPF DO REPRESENTANTE LEGAL
-	numero_cpf_representante_legal VARCHAR(18),,
+	numero_cpf_representante_legal VARCHAR(18),
 	-- NOME DO REPRESENTANTE LEGAL
 	nome_representante_legal VARCHAR,
 	-- CÓDIGO DA QUALIFICAÇÃO DO REPRESENTANTE LEGAL
