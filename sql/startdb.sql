@@ -82,17 +82,17 @@ create table estabelecimento (
 	-- CÓDIGO DO MUNICÍPIO DE JURISDIÇÃO ONDE SE ENCONTRA O ESTABELECIMENTO
 	municipio VARCHAR,
 	-- CONTÉM O DDD 1
-	ddd_1 VARCHAR(2),
+	ddd_1 VARCHAR(3),
 	-- CONTÉM O NÚMERO DO TELEFONE 1
 	telefone_1 VARCHAR(9),
 	-- CONTÉM O DDD 2
-	ddd_2 varchar(2),
+	ddd_2 varchar(3),
 	-- CONTÉM O NÚMERO DO TELEFONE 2
-	telefone_2 VARCHAR(9),
+	telefone_2 VARCHAR(14),
 	-- CONTÉM O DDD DO FAX
-	ddd_fax VARCHAR(2),
+	ddd_fax VARCHAR(3),
 	-- CONTÉM O NÚMERO DO FAX
-	telefone_fax VARCHAR(9),
+	telefone_fax VARCHAR(14),
 	-- CONTÉM O E-MAIL DO CONTRIBUINTE
 	correio_eletronico VARCHAR,
 	-- SITUAÇÃO ESPECIAL DA EMPRESA
