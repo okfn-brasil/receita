@@ -15,7 +15,7 @@ create table empresa (
 	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
 	qualificacao_do_responsavel INT,
 	-- CAPITAL SOCIAL DA EMPRESA
-	capital_social VARCHAR(3),
+	capital_social VARCHAR,
 	-- CÓDIGO DO PORTE DA EMPRESA:
 		-- 00 - NÃO INFORMADO
 		-- 01 - MICRO EMPRESA
@@ -31,7 +31,6 @@ create table empresa (
 drop table if exists estabelecimento;
 create table estabelecimento (
 	-- Chave primária
-	cnpj VARCHAR(15),
 	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (OITO PRIMEIROS DÍGITOS DO CNPJ).
 	cnpj_basico VARCHAR(8),
 	-- NÚMERO DO ESTABELECIMENTO DE INSCRIÇÃO NO CNPJ (DO NONO ATÉ O DÉCIMO SEGUNDO DÍGITO DO CNPJ).
@@ -54,7 +53,7 @@ create table estabelecimento (
 	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
 	data_situacao_cadastral VARCHAR(10),
 	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
-	motivo_situacao_cadastral VARCHAR(5),
+	motivo_situacao_cadastral VARCHAR(11),
 	-- NOME DA CIDADE NO EXTERIOR
 	nome_cidade_exterior VARCHAR,
 	-- CÓDIGO DO PAIS
@@ -76,21 +75,21 @@ create table estabelecimento (
 	-- BAIRRO ONDE SE LOCALIZA O ESTABELECIMENTO.
 	bairro VARCHAR,
 	-- CÓDIGO DE ENDEREÇAMENTO POSTAL REFERENTE AO LOGRADOURO NO QUAL O ESTABELECIMENTO ESTA LOCALIZADO
-	cep VARCHAR(9),
+	cep VARCHAR(11),
 	-- SIGLA DA UNIDADE DA FEDERAÇÃO EM QUE SE ENCONTRA O ESTABELECIMENTO
 	uf VARCHAR(2),
 	-- CÓDIGO DO MUNICÍPIO DE JURISDIÇÃO ONDE SE ENCONTRA O ESTABELECIMENTO
 	municipio VARCHAR,
 	-- CONTÉM O DDD 1
-	ddd_1 VARCHAR(3),
+	ddd_1 VARCHAR(15),
 	-- CONTÉM O NÚMERO DO TELEFONE 1
-	telefone_1 VARCHAR(9),
+	telefone_1 VARCHAR(14),
 	-- CONTÉM O DDD 2
-	ddd_2 varchar(3),
+	ddd_2 varchar(15),
 	-- CONTÉM O NÚMERO DO TELEFONE 2
 	telefone_2 VARCHAR(14),
 	-- CONTÉM O DDD DO FAX
-	ddd_fax VARCHAR(3),
+	ddd_fax VARCHAR(15),
 	-- CONTÉM O NÚMERO DO FAX
 	telefone_fax VARCHAR(14),
 	-- CONTÉM O E-MAIL DO CONTRIBUINTE
