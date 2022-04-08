@@ -84,17 +84,17 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     campos_selecionados = mapeamento_nome_campos[tabela]
     try:
         read_chunk_size = 100_000
-        write_chunk_size = 15_000
+        write_chunk_size = 10_000
         # Total de itens a serem carregados do arquivo csv
         n_items_csv = 0
         # Total de itens já salvos no banco de dados
         n_carregados = 0
         # Passo intermediário para pegar o número total de itens do .csv
-        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
+        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None, index_col=False, low_memory=False) as csv_reader:
             for chunk in csv_reader:
                 n_items_csv = n_items_csv + int(chunk.shape[0])
             print(f'Total de {n_items_csv} a serem carregados em memória')
-        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
+        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None, index_col=False, low_memory=False) as csv_reader:
             for chunk in csv_reader:
                 # Salva no banco de dados os registros:
                 if sql_engine is not None:
@@ -115,7 +115,7 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
                     except Exception as e:
                         print(f'Erro {e} ao salvar os dados na tabela {tabela}')
             porcentagem = status_carga(n_carregados, n_items_csv)
-            print(f'Foram salvos {n_carregados} de um total de {n_items_csv} ({porcentagem}).')
+            print(f'Foram salvos {n_carregados} de um total de {n_items_csv} ({porcentagem}%).')
             return True
     except:
         exc_info = sys.exc_info()
@@ -123,74 +123,13 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
 
     return False
 
-def carregar_tabela(caminho_nome_arquivo, nome_tabela, nome_db, host, porta, user, pwd):
-    '''
-    This function uploads csv to a target table using copy_from
-    '''
-    # Conexão com o Banco
-    conn = None
-    # Stream StreamIO
-    sio = None
-    try:
-        conn = psycopg2.connect(dbname=nome_db, host=host, port=porta, user=user, password=pwd)
-        # conn.autocommit = True
-        print("Conectado ao BD com sucesso.")
-    except Exception as e:
-        print("Erro de conexão ao banco de dados: {}".format(str(e)))
-        sys.exit(1)
-    campos_selecionados = mapeamento_nome_campos[nome_tabela]
-    try:
-        read_chunk_size = 100_000
-        write_chunk_size = 15_000
-        # Total de itens a serem carregados do arquivo csv
-        n_items_csv = 0
-        # Total de itens já salvos no banco de dados
-        n_carregados = 0
-        # Passo intermediário para pegar o número total de itens do .csv
-        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
-            for chunk in csv_reader:
-                n_items_csv = n_items_csv + int(chunk.shape[0])
-            print(f'Total de {n_items_csv} a serem carregados em memória')
-        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None) as csv_reader:
-            for chunk in csv_reader:
-                try:
-                    sio = io.StringIO()
-                    writer = csv.writer(sio)
-                    writer.writerows(chunk.values)
-                    sio.seek(0)
-                except Exception as e:
-                    print("Erro objeto de escrita StringIO: {}".format(str(e)))
-                    sys.exit(1)
-
-                if sio is not None:
-                    # Grava no banco
-                    try:
-                        with conn.cursor() as c:
-                            copy_from_response = c.copy_from(
-                                file=sio,
-                                table=nome_tabela,
-                                columns=campos_selecionados,
-                                sep=","
-                            )
-                            print(f'Copy from response: {copy_from_response}')
-                            commit_response = conn.commit()
-                            print(f'Commit response: {commit_response}')
-                    except Exception as e:
-                        print("Erro de escrita no banco de dados: {}".format(str(e)))
-                        sys.exit(1)
-            conn.close()
-            print("Conexão com o banco fechada.")
-            return True
-    except:
-        print(f'Erro de abertura do arquivo CSV')
-    return False
 # Fluxo de execução principal do programa
 def ingest_datasets():
     # Instantiate sqlachemy.create_engine object
     sql_engine = None
     try:
         # Remember to set here
-        db_password = 'change your password here'
+        db_password = 'change here'
         # Adding pass to the connection string
         db_url =(f'postgresql://postgres:{db_password}@localhost:5432/qd_receita')
         sql_engine = create_engine(db_url, isolation_level="AUTOCOMMIT")
@@ -252,6 +191,7 @@ def ingest_datasets():
                     except:
                         exc_info = sys.exc_info()
                         print(f'Erro de carga do .csv em memória: \n{exc_info}')
+                    # TODO: Delete the unzipped .csv file after been processed.
             print(f'Fim da carga dos arquivos CSV para a chave {chave}')
         except:
             print(f'Erro na busca de arquivos zip para a tabela {chave}: \n \t{sys.exc_info()}')
