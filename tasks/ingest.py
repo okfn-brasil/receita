@@ -17,6 +17,7 @@ from sqlalchemy import event
 from concurrent.futures import ThreadPoolExecutor
 import io
 import csv
+import os
 
 # Mapeamento  entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
 mapeamento_tabelas_zip = {
@@ -26,12 +27,11 @@ mapeamento_tabelas_zip = {
     "socio": "SOCIO",
     "pais": "PAIS",
     "municipio": "MUNIC",
-    "qualificacoes_socio": "QUALS",
+    "qualificacao_socio": "QUALS",
     "natureza_juridica": "NATJU",
     "cnae": "CNAE",
     #"motivo_situacao_cadastral": "MOTI"
 }
-# TODO: Verificar se não está baixando os arquivos "MOTI" dos .zip?
 
 # Mapeamento campos por [índice] .csv estabelecimento → nome dos campos tabela BD
 mapeamento_nome_campos = {
@@ -42,7 +42,7 @@ mapeamento_nome_campos = {
     'socio': ['cnpj_basico', 'identificador_socio', 'razao_social', 'cnpj_cpf_socio', 'codigo_qualificacao_socio', 'data_entrada_sociedade', 'codigo_pais_socio_estrangeiro', 'numero_cpf_representante_legal', 'nome_representante_legal', 'codigo_qualificacao_representante_legal', 'faixa_etaria'],
     'pais': ['codigo', 'descricao'],
     'municipio': ['codigo', 'descricao'],
-    'qualificacoes_socio': ['codigo', 'descricao'],
+    'qualificacao_socio': ['codigo', 'descricao'],
     'natureza_juridica': ['codigo', 'descricao'],
     'cnae': ['codigo', 'descricao']
 }
@@ -116,6 +116,15 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
                         print(f'Erro {e} ao salvar os dados na tabela {tabela}')
             porcentagem = status_carga(n_carregados, n_items_csv)
             print(f'Foram salvos {n_carregados} de um total de {n_items_csv} ({porcentagem}%).')
+            # Deletando o arquivo CSV após a carga.
+            try:
+                removed = os.remove(caminho_nome_arquivo)
+                if removed:
+                    print(f'→ Arquivo [{caminho_nome_arquivo}] deletado com sucesso.')
+                else:
+                    print(f'→ Erro ao remover arquivo [{caminho_nome_arquivo}].')
+            except Exception as e:
+                print(f'→ Ocorreu algo inesperado: [{str(e)}].')
             return True
     except:
         exc_info = sys.exc_info()
