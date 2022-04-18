@@ -11,9 +11,9 @@ create table empresa (
 	-- NOME EMPRESARIAL DA PESSOA JURÍDICA
 	razao_social VARCHAR,
 	-- CÓDIGO DA NATUREZA JURÍDICA
-	codigo_natureza_juridica INT,
+	codigo_natureza_juridica SMALLINT,
 	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
-	qualificacao_do_responsavel INT,
+	qualificacao_do_responsavel SMALLINT,
 	-- CAPITAL SOCIAL DA EMPRESA
 	capital_social VARCHAR,
 	-- CÓDIGO DO PORTE DA EMPRESA:
@@ -22,8 +22,9 @@ create table empresa (
 		-- 03 - EMPRESA DE PEQUENO PORTE
 		-- 05 - DEMAIS
 	porte VARCHAR,
-	-- O ENTE FEDERATIVO RESPONSÁVEL É PREENCHIDO PARA OS CASOS DE ÓRGÃOS E ENTIDADES DO GRUPO DE NATUREZA JURÍDICA 1XXX.
+	-- O ENTE FEDERATIVO RESPONSÁVEL É PREENCHIDO PARA OS CASOS DE ÓRGÃOS E ENTIDADES DO GRUPO DE NATUREZA JURÍDICA.
 	-- PARA AS DEMAIS NATUREZAS, ESTE ATRIBUTO FICA EM BRANCO.
+	-- OBS.: Corresponde ao par cidade - uf
 	ente_federativo_responsavel VARCHAR
 );
 
@@ -173,7 +174,7 @@ create table socio (
 drop table if exists pais;
 create table pais (
 	-- CÓDIGO DO PAÍS
-	codigo INT,
+	codigo SMALLINT,
 	-- NOME DO PAÍS
 	descricao VARCHAR
 );
@@ -182,7 +183,7 @@ create table pais (
 drop table if exists municipio;
 create table municipio (
 	-- CÓDIGO DO MUNICÍPIO
-	codigo INT,
+	codigo SMALLINT,
 	-- NOME DO MUNICÍPIO
 	descricao VARCHAR
 );
@@ -191,7 +192,7 @@ create table municipio (
 drop table if exists qualificacao_socio;
 create table qualificacao_socio (
 	-- CÓDIGO DA QUALIFICAÇÃO DO SÓCIO
-	codigo INT,
+	codigo SMALLINT,
 	-- NOME DA QUALIFICAÇÃO DO SÓCIO
 	descricao VARCHAR
 );
@@ -200,7 +201,7 @@ create table qualificacao_socio (
 drop table if exists natureza_juridica;
 create table natureza_juridica (
 	-- CÓDIGO DA NATUREZA JURÍDICA
-	codigo INT,
+	codigo SMALLINT,
 	-- NOME DA NATUREZA JURÍDICA
 	descricao VARCHAR
 );
@@ -209,9 +210,138 @@ create table natureza_juridica (
 drop table if exists cnae;
 create table cnae (
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA
-	codigo INT,
+	codigo SMALLINT,
 	-- NOME DA ATIVIDADE ECONÔMICA
 	descricao VARCHAR
+);
+
+-- Tabela auxiliar com a resposta completa montada com referência aos códigos e descrição textual a ser retornada a partir de um CNPJ fornecido.
+drop table if exists resposta_cnpj;
+create table resposta_cnpj (
+	-- Chave primária CNPJ COMPLETO
+	cnpj_base VARCHAR(15) PRIMARY KEY,
+ 	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (OITO PRIMEIROS DÍGITOS DO CNPJ).
+ 	estabelecimento_cnpj_basico VARCHAR(8),
+ 	-- NÚMERO DO ESTABELECIMENTO DE INSCRIÇÃO NO CNPJ (DO NONO ATÉ O DÉCIMO SEGUNDO DÍGITO DO CNPJ).
+ 	estabelecimento_cnpj_ordem VARCHAR(4),
+ 	-- DÍGITO VERIFICADOR DO NÚMERO DE INSCRIÇÃO NO CNPJ (DOIS ÚLTIMOS DÍGITOS DO CNPJ).
+ 	estabelecimento_cnpj_dv VARCHAR(10),
+ 	-- CÓDIGO DO IDENTIFICADOR MATRIZ/FILIAL:
+ 		-- '1 - MATRIZ'
+ 		-- '2 - FILIAL'
+ 	estabelecimento_identificador_matriz_filial VARCHAR,
+ 	-- CORRESPONDE AO NOME FANTASIA
+ 	estabelecimento_nome_fantasia VARCHAR,
+ 	-- CÓDIGO DA SITUAÇÃO CADASTRAL:
+ 		-- 01 - NULA
+ 		-- 2 - ATIVA
+ 		-- 3 - SUSPENSA
+ 		-- 4 - INAPTA
+ 		-- 08 - BAIXADA
+ 	estabelecimento_situacao_cadastral VARCHAR(15),
+ 	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
+ 	estabelecimento_data_situacao_cadastral VARCHAR(10),
+ 	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
+ 	estabelecimento_motivo_situacao_cadastral VARCHAR(11),
+ 	-- NOME DA CIDADE NO EXTERIOR
+ 	estabelecimento_nome_cidade_exterior VARCHAR,
+ 	-- DATA DE INÍCIO DA ATIVIDADE
+ 	estabelecimento_data_inicio_atividade VARCHAR(10),
+ 	-- CÓDIGO DA(S) ATIVIDADE(S) ECONÔMICA(S) SECUNDÁRIA(S) DO ESTABELECIMENTO
+ 	estabelecimento_cnae_fiscal_secundario VARCHAR,
+ 	-- DESCRIÇÃO DO TIPO DE LOGRADOURO
+ 	estabelecimento_tipo_logradouro VARCHAR,
+ 	-- NOME DO LOGRADOURO ONDE SE LOCALIZA O ESTABELECIMENTO.
+ 	estabelecimento_logradouro VARCHAR,
+ 	-- NÚMERO ONDE SE LOCALIZA O ESTABELECIMENTO. QUANDO NÃO HOUVER PREENCHIMENTO DO NÚMERO HAVERÁ ‘S/N’.
+ 	estabelecimento_numero VARCHAR,
+ 	-- COMPLEMENTO PARA O ENDEREÇO DE LOCALIZAÇÃO DO ESTABELECIMENTO
+ 	estabelecimento_complemento VARCHAR,
+ 	-- BAIRRO ONDE SE LOCALIZA O ESTABELECIMENTO.
+ 	estabelecimento_bairro VARCHAR,
+ 	-- CÓDIGO DE ENDEREÇAMENTO POSTAL REFERENTE AO LOGRADOURO NO QUAL O ESTABELECIMENTO ESTA LOCALIZADO
+ 	estabelecimento_cep VARCHAR(11),
+ 	-- SIGLA DA UNIDADE DA FEDERAÇÃO EM QUE SE ENCONTRA O ESTABELECIMENTO
+ 	estabelecimento_uf VARCHAR(2),
+ 	-- CÓDIGO DO MUNICÍPIO DE JURISDIÇÃO ONDE SE ENCONTRA O ESTABELECIMENTO
+ 	estabelecimento_municipio VARCHAR,
+ 	-- CONTÉM O DDD 1 E O NÚMERO DO TELEFONE telefone_1
+	estabelecimento_ddd_telefone_1 VARCHAR(16),
+ 	-- CONTÉM O DDD 2 E O NÚMERO DO TELEFONE telefone_2
+ 	estabelecimento_ddd_telefone_2 varchar(16),
+ 	-- CONTÉM O DDD E O NÚMERO DO FAX
+ 	estabelecimento_ddd_telefone_fax VARCHAR(16),
+ 	-- CONTÉM O E-MAIL DO CONTRIBUINTE
+ 	estabelecimento_correio_eletronico VARCHAR,
+ 	-- SITUAÇÃO ESPECIAL DA EMPRESA
+ 	estabelecimento_situacao_especial VARCHAR,
+ 	-- DATA EM QUE A EMPRESA ENTROU EM SITUAÇÃO ESPECIAL
+ 	estabelecimento_data_situacao_especial VARCHAR(10),
+
+	-- CÓDIGO E NOME DO PAÍS
+	pais VARCHAR(50),
+	-- CÓDIGO E NOME DO MUNICIPIO
+	municipio VARCHAR(100),
+
+	-- Informações da tabela EMPRESA
+
+	-- RAZÃO_SOCIAL DA EMPRESA
+	empresa_razao_social VARCHAR,
+	-- CÓDIGO DA NATUREZA JURÍDICA
+	empresa_codigo_natureza_juridica SMALLINT,
+	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
+	empresa_qualificacao_do_responsavel SMALLINT,
+	-- CAPITAL SOCIAL DA EMPRESA
+	empresa_capital_social VARCHAR,
+	-- CÓDIGO DO PORTE DA EMPRESA:
+		-- 00 - NÃO INFORMADO
+		-- 01 - MICRO EMPRESA
+		-- 03 - EMPRESA DE PEQUENO PORTE
+		-- 05 - DEMAIS
+	empresa_porte VARCHAR,
+	-- O ENTE FEDERATIVO RESPONSÁVEL É PREENCHIDO PARA OS CASOS DE ÓRGÃOS E ENTIDADES DO GRUPO DE NATUREZA JURÍDICA 1XXX.
+	-- PARA AS DEMAIS NATUREZAS, ESTE ATRIBUTO FICA EM BRANCO.
+	empresa_ente_federativo_responsavel VARCHAR,
+
+	-- Informações tabela SIMPLES:
+
+	-- INDICADOR DA EXISTÊNCIA DA OPÇÃO PELO SIMPLES.
+		-- S - SIM
+		-- N - NÃO
+		-- EM BRANCO - OUTROS
+	simples_opcao_pelo_simples VARCHAR(20),
+	-- DATA DE OPÇÃO PELO SIMPLES
+	simples_data_opcao_pelo_simples VARCHAR(10),
+	-- DATA DE EXCLUSÃO DO SIMPLES
+	simples_data_exclusao_pelo_simples VARCHAR(10),
+	-- INDICADOR DA EXISTÊNCIA DA OPÇÃO PELO MEI
+		-- S - SIM
+		-- N - NÃO
+		-- EM BRANCO - OUTROS
+	simples_opcao_pelo_mei VARCHAR(20),
+	-- DATA DE OPÇÃO PELO MEI
+	simples_data_opcao_pelo_mei VARCHAR(10),
+	-- DATA DE EXCLUSÃO DO MEI
+	simples_data_exclusao_pelo_mei VARCHAR(10),
+
+	-- cnae
+	-- CÓDIGO DA ATIVIDADE ECONÔMICA PRINCIPAL DO ESTABELECIMENTO
+	cnae VARCHAR,
+
+	-- natureza_juridica
+	natureza_juridica VARCHAR,
+
+	-- qualificacao_socio
+	qualificacao_socio VARCHAR
+);
+
+-- Tabela para simplificar as relações de sociedade de modo que pelo CNPJ fornecido seja possível rapidamente encontrar todos os CNPJs que estão a ele associados
+drop table if exists resposta_socios;
+create table resposta_socios (
+	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (CADASTRO NACIONAL DA PESSOA JURÍDICA) a ser buscado
+	cnpj_basico VARCHAR(8) PRIMARY KEY,
+	-- Sócios é a lista de CNPJs/CPFs relacionados ao CNPJ fornecido em texto e separados por vírgula
+	socios VARCHAR
 );
 
 -- Primary keys:
@@ -241,3 +371,4 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnae_fiscal ON estab
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_local ON estabelecimento (uf, municipio, bairro);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_situacao_cadastral ON estabelecimento (situacao_cadastral);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_simples_mei_simples ON simples (opcao_pelo_mei, opcao_pelo_simples);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_resposta_cnpj ON resposta_cnpj (estabelecimento_cnpj_basico);
