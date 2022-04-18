@@ -69,7 +69,7 @@ def conecta():
     except Exception as e:
         print(e)
 
-def __main__:
+if __name__ == "__main__":
     # Estabelece conexão com o BD
     conn = conecta()
     if conn is not None:
