@@ -218,14 +218,14 @@ create table cnae (
 -- Tabela auxiliar com a resposta completa montada com referência aos códigos e descrição textual a ser retornada a partir de um CNPJ fornecido.
 drop table if exists resposta_cnpj;
 create table resposta_cnpj (
-	-- Chave primária CNPJ COMPLETO
-	cnpj_base VARCHAR(15) PRIMARY KEY,
  	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (OITO PRIMEIROS DÍGITOS DO CNPJ).
  	estabelecimento_cnpj_basico VARCHAR(8),
  	-- NÚMERO DO ESTABELECIMENTO DE INSCRIÇÃO NO CNPJ (DO NONO ATÉ O DÉCIMO SEGUNDO DÍGITO DO CNPJ).
  	estabelecimento_cnpj_ordem VARCHAR(4),
  	-- DÍGITO VERIFICADOR DO NÚMERO DE INSCRIÇÃO NO CNPJ (DOIS ÚLTIMOS DÍGITOS DO CNPJ).
  	estabelecimento_cnpj_dv VARCHAR(10),
+	-- Chave primária é uma combinação das três colunas anteriores
+	PRIMARY KEY(estabelecimento_cnpj_basico, estabelecimento_cnpj_ordemestabelecimento_cnpj_dv),
  	-- CÓDIGO DO IDENTIFICADOR MATRIZ/FILIAL:
  		-- '1 - MATRIZ'
  		-- '2 - FILIAL'
@@ -278,13 +278,7 @@ create table resposta_cnpj (
  	-- DATA EM QUE A EMPRESA ENTROU EM SITUAÇÃO ESPECIAL
  	estabelecimento_data_situacao_especial VARCHAR(10),
 
-	-- CÓDIGO E NOME DO PAÍS
-	pais VARCHAR(50),
-	-- CÓDIGO E NOME DO MUNICIPIO
-	municipio VARCHAR(100),
-
 	-- Informações da tabela EMPRESA
-
 	-- RAZÃO_SOCIAL DA EMPRESA
 	empresa_razao_social VARCHAR,
 	-- CÓDIGO DA NATUREZA JURÍDICA
@@ -304,7 +298,6 @@ create table resposta_cnpj (
 	empresa_ente_federativo_responsavel VARCHAR,
 
 	-- Informações tabela SIMPLES:
-
 	-- INDICADOR DA EXISTÊNCIA DA OPÇÃO PELO SIMPLES.
 		-- S - SIM
 		-- N - NÃO
@@ -328,11 +321,10 @@ create table resposta_cnpj (
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA PRINCIPAL DO ESTABELECIMENTO
 	cnae VARCHAR,
 
-	-- natureza_juridica
-	natureza_juridica VARCHAR,
-
-	-- qualificacao_socio
-	qualificacao_socio VARCHAR
+	-- CÓDIGO E NOME DO PAÍS
+	pais VARCHAR(50),
+	-- CÓDIGO E NOME DO MUNICIPIO
+	municipio VARCHAR(100)
 );
 
 -- Tabela para simplificar as relações de sociedade de modo que pelo CNPJ fornecido seja possível rapidamente encontrar todos os CNPJs que estão a ele associados
@@ -364,7 +356,7 @@ ALTER TABLE socio ADD CONSTRAINT pk_socio_id PRIMARY KEY (cnpj_basico);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_empresa_cnpj ON empresa (cnpj);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cnae_codigo ON cnae (codigo);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cnae_descricao ON cnae (descricao);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnpj ON estabelecimento (cnpj);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnpj ON estabelecimento (cnpj_basico);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_simples_cnpj_basico ON simples (cnpj_basico);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_socio_cnpj_basico ON socio (cnpj_basico);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnae_fiscal ON estabelecimento (cnae_fiscal);
