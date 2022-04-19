@@ -43,33 +43,33 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' simples.opcao_pelo_simples as simples_opcao_pelo_simples,'
     sql = sql + ' simples.data_opcao_pelo_simples as simples_data_opcao_pelo_simples,'
     sql = sql + ' simples.data_exclusao_pelo_simples as simples_data_exclusao_pelo_simples,'
-    sql = sql + ' simples.data_exclusao_pelo_mei as simples_data_exclusao_pelo_mei'
+    sql = sql + ' simples.data_exclusao_pelo_mei as simples_data_exclusao_pelo_mei,'
+    sql = sql + ' cnae.codigo as cnae_codigo,'
+    sql = sql + ' cnae.descricao as cnae_descricao,'
+    # TODO: a inclusão da consulta para país está pegando resultados null e cancelando a query inteira, por hora será desabilitada'
+    #sql = sql + ' pais.codigo as pais_codigo,'
+    #sql = sql + ' pais.descricao as pais_descricao,'
+    sql = sql + ' municipio.codigo as municipio_codigo,'
+    sql = sql + ' municipio.descricao as municipio_descricao'
     sql = sql + ' FROM estabelecimento'
     sql = sql + ' INNER JOIN empresa ON estabelecimento.cnpj_basico = empresa.cnpj'
     sql = sql + ' INNER JOIN simples ON estabelecimento.cnpj_basico = simples.cnpj_basico'
+    sql = sql + ' INNER JOIN cnae ON estabelecimento.cnae_fiscal = cnae.codigo'
+    sql = sql + ' INNER JOIN municipio ON estabelecimento.municipio = municipio.codigo'
+    # sql = sql + ' INNER JOIN pais ON estabelecimento.pais = pais.codigo'
     sql = sql + f' WHERE estabelecimento.cnpj_basico =  \'{cnpj_basico}\';'
     print(f'SQL a ser executado: \n {sql}')
     if cursor is not None:
         cursor.execute(sql)
         results = cursor.fetchall()
+        # Armazena os campos a serem salvos na tabela de resposta_cnpj
+        campos_cnpj = {}
         if results is not None:
             print(f'A busca retornou {len(results)} resultados:')
             for r in results:
-                print('************************************************')
-                empresa_razao_social = r['empresa_razao_social']
-                print(f'empresa_razao_social: {empresa_razao_social}')
-                empresa_empresa_porte = r['empresa_porte']
-                print(f'empresa_porte: {empresa_porte}')
-                estabelecimento_cnae_fiscal = r['estabelecimento_cnae_fiscal']
-                print(f'estabelecimento_cnae_fiscal: {estabelecimento_cnae_fiscal}')
-                estabelecimento_pais = r['estabelecimento_pais']
-                print(f'estabelecimento_pais: {estabelecimento_pais}')
-                estabelecimento_municipio = r['estabelecimento_municipio']
-                print(f'estabelecimento_municipio: {estabelecimento_municipio}')
-                empresa_codigo_natureza_juridica  = r['empresa_codigo_natureza_juridica']
-                print(f'empresa_codigo_natureza_juridica: {empresa_codigo_natureza_juridica}')
-                simples_opcao_pelo_simples = r['simples_opcao_pelo_simples']
-                print(f'simples_opcao_pelo_simples: {simples_opcao_pelo_simples}')
+                campos_cnpj = r.copy()
+                print(campos_cnpj)
+                # TODO: Salvar registro resposta_cnpj
     pass
 
 def conecta():
