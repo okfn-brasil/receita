@@ -56,7 +56,11 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
             print(f'A busca retornou {len(results)} resultados:')
             for r in results:
                 print('************************************************')
-                estabelecimento_cnae_fiscal = r['estabelecimento_cnae_fiscal'] 
+                empresa_razao_social = r['empresa_razao_social']
+                print(f'empresa_razao_social: {empresa_razao_social}')
+                empresa_empresa_porte = r['empresa_porte']
+                print(f'empresa_porte: {empresa_porte}')
+                estabelecimento_cnae_fiscal = r['estabelecimento_cnae_fiscal']
                 print(f'estabelecimento_cnae_fiscal: {estabelecimento_cnae_fiscal}')
                 estabelecimento_pais = r['estabelecimento_pais']
                 print(f'estabelecimento_pais: {estabelecimento_pais}')
@@ -64,6 +68,8 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 print(f'estabelecimento_municipio: {estabelecimento_municipio}')
                 empresa_codigo_natureza_juridica  = r['empresa_codigo_natureza_juridica']
                 print(f'empresa_codigo_natureza_juridica: {empresa_codigo_natureza_juridica}')
+                simples_opcao_pelo_simples = r['simples_opcao_pelo_simples']
+                print(f'simples_opcao_pelo_simples: {simples_opcao_pelo_simples}')
     pass
 
 def conecta():
