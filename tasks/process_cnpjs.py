@@ -112,7 +112,19 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_data_opcao_pelo_mei']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_data_exclusao_pelo_mei']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['cnae_codigo']) + ' - ' + str(campos_cnpj['cnae_descricao']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
+                # Realizar consulta à tabela país, caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
+                cod_pais = str(campos_cnpj['estabelecimento_pais'])
+                if (cod_pais != '') and (cod_pais != 'None'):
+                    sql_pais = f'select * from pais where codigo = \'{cod_pais}\''
+                    if cursor is not None:
+                        cursor.execute(sql_pais)
+                        results = cursor.fetchall()
+                        if results is not None:
+                            resultado_pais = results[0]
+                            descricao_pais = resultado_pais['descricao']
+                            sql_insert = sql_insert + '\'' + cod_pais + ' - ' + descricricao_pais']) + '\', '
+                else:
+                    sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['municipio_codigo']) + ' - ' + str(campos_cnpj['municipio_descricao']) + '\''
                 sql_insert = sql_insert + ')'
                 print(f'SQL Insert: \n{sql_insert}')
