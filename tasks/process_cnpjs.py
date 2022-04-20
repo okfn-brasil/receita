@@ -40,12 +40,15 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' empresa.capital_social  as empresa_capital_social,'
     sql = sql + ' empresa.porte as empresa_porte,'
     sql = sql + ' empresa.ente_federativo_responsavel as empresa_ente_federativo_responsavel,'
+    '''
+    # Removendo campos simples
     sql = sql + ' simples.opcao_pelo_simples as simples_opcao_pelo_simples,'
     sql = sql + ' simples.data_opcao_pelo_simples as simples_data_opcao_pelo_simples,'
     sql = sql + ' simples.data_exclusao_pelo_simples as simples_data_exclusao_pelo_simples,'
     sql = sql + ' simples.opcao_pelo_mei as simples_opcao_pelo_mei,'
     sql = sql + ' simples.data_opcao_pelo_mei as simples_data_opcao_pelo_mei,'
     sql = sql + ' simples.data_exclusao_pelo_mei as simples_data_exclusao_pelo_mei,'
+    '''
     sql = sql + ' cnae.codigo as cnae_codigo,'
     sql = sql + ' cnae.descricao as cnae_descricao,'
     # TODO: a inclusão da consulta para país está pegando resultados null e cancelando a query inteira, por hora será desabilitada'
@@ -55,7 +58,8 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' municipio.descricao as municipio_descricao'
     sql = sql + ' FROM estabelecimento'
     sql = sql + ' INNER JOIN empresa ON estabelecimento.cnpj_basico = empresa.cnpj'
-    sql = sql + ' INNER JOIN simples ON estabelecimento.cnpj_basico = simples.cnpj_basico'
+    # TODO: remover e substituir por consulta complementar pras informações do simples
+    #sql = sql + ' INNER JOIN simples ON estabelecimento.cnpj_basico = simples.cnpj_basico'
     sql = sql + ' INNER JOIN cnae ON estabelecimento.cnae_fiscal = cnae.codigo'
     sql = sql + ' INNER JOIN municipio ON estabelecimento.municipio = municipio.codigo'
     # sql = sql + ' INNER JOIN pais ON estabelecimento.pais = pais.codigo'
@@ -105,24 +109,52 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_capital_social']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_porte']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_ente_federativo_responsavel']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_opcao_pelo_simples']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_data_opcao_pelo_simples']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_data_exclusao_pelo_simples']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_opcao_pelo_mei']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_data_opcao_pelo_mei']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_data_exclusao_pelo_mei']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['cnae_codigo']) + ' - ' + str(campos_cnpj['cnae_descricao']) + '\', '
+
+                #Realizar consulta complementar simples:
+                sql_simples = 'SELECT '
+                sql_simples = sql_simples + ' opcao_pelo_simples as simples_opcao_pelo_simples,'
+                sql_simples = sql_simples + ' data_opcao_pelo_simples as simples_data_opcao_pelo_simples,'
+                sql_simples = sql_simples + ' data_exclusao_pelo_simples as simples_data_exclusao_pelo_simples,'
+                sql_simples = sql_simples + ' opcao_pelo_mei as simples_opcao_pelo_mei,'
+                sql_simples = sql_simples + ' data_opcao_pelo_mei as simples_data_opcao_pelo_mei,'
+                sql_simples = sql_simples + ' data_exclusao_pelo_mei as simples_data_exclusao_pelo_mei '
+                sql_simples = sql_simples + f' from simples where cnpj_basico= \'{str(campos_cnpj['estabelecimento_cnpj_basico'])}\''
+                print(f'SQL: {sql_simples}')
+                if cursor is not None:
+                    cursor.execute(sql_simples)
+                    results = cursor.fetchall()
+                    if results is not None:
+                        resultado_simples = results[0]
+                        if resultado_simples is not None:
+                            sql_insert = sql_insert + '\'' + str(resultado_simples['opcao_pelo_simples']) + '\', '
+                            sql_insert = sql_insert + '\'' + str(resultado_simples['data_opcao_pelo_simples']) + '\', '
+                            sql_insert = sql_insert + '\'' + str(resultado_simples['data_exclusao_pelo_simples']) + '\', '
+                            sql_insert = sql_insert + '\'' + str(resultado_simples['opcao_pelo_mei']) + '\', '
+                            sql_insert = sql_insert + '\'' + str(resultado_simples['data_opcao_pelo_mei']) + '\', '
+                            sql_insert = sql_insert + '\'' + str(resultado_simples['data_exclusao_pelo_mei']) + '\', '
+                    else:
+                        # Se não encontrou informações sobre o simples, deixa em branco
+                        sql_insert = sql_insert + '\'\', '
+                        sql_insert = sql_insert + '\'\', '
+                        sql_insert = sql_insert + '\'\', '
+                        sql_insert = sql_insert + '\'\', '
+                        sql_insert = sql_insert + '\'\', '
+                        sql_insert = sql_insert + '\'\', '
+                        
                 # Realizar consulta à tabela país, caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
-                cod_pais = str(campos_cnpj['estabelecimento_pais'])
-                if (cod_pais != '') and (cod_pais != 'None'):
-                    sql_pais = f'select * from pais where codigo = \'{cod_pais}\''
+                pais_codigo = str(campos_cnpj['estabelecimento_pais'])
+                if (pais_codigo != '') and (pais_codigo != 'None'):
+                    sql_pais = f'select * from pais where codigo = \'{pais_codigo}\''
                     if cursor is not None:
                         cursor.execute(sql_pais)
                         results = cursor.fetchall()
                         if results is not None:
+                            # SHould be a single result, fetch first
                             resultado_pais = results[0]
-                            descricao_pais = resultado_pais['descricao']
-                            sql_insert = sql_insert + '\'' + cod_pais + ' - ' + descricricao_pais']) + '\', '
+                            pais_descricao = resultado_pais['descricao']
+                            pais_cod_desc = f'{pais_codigo} - {pais_descricao}'
+                            print(f'pais: {pais_cod_desc}')
+                            sql_insert = sql_insert + f'\'{pais_cod_desc}\', '
                 else:
                     sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['municipio_codigo']) + ' - ' + str(campos_cnpj['municipio_descricao']) + '\''
