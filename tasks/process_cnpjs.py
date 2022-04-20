@@ -112,7 +112,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_data_opcao_pelo_mei']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['simples_data_exclusao_pelo_mei']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['cnae_codigo']) + ' - ' + str(campos_cnpj['cnae_descricao']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['pais_codigo']) + ' - ' + str(campos_cnpj['pais_descricao']) + '\', '
+                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['municipio_codigo']) + ' - ' + str(campos_cnpj['municipio_descricao']) + '\''
                 sql_insert = sql_insert + ')'
                 print(f'SQL Insert: \n{sql_insert}')
