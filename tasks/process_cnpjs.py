@@ -140,7 +140,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                         sql_insert = sql_insert + '\'\', '
                         sql_insert = sql_insert + '\'\', '
                         sql_insert = sql_insert + '\'\', '
-                        
+
                 # Realizar consulta à tabela país, caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
                 pais_codigo = str(campos_cnpj['estabelecimento_pais'])
                 if (pais_codigo != '') and (pais_codigo != 'None'):
@@ -177,6 +177,15 @@ if __name__ == "__main__":
         cursor = conn.cursor()
         # Carrega a informação do CNPJ e dos sócios:
         process_resposta_cnpjs('3727664', cursor)
+        process_resposta_cnpjs('16212670', cursor)
+        process_resposta_cnpjs('8682325', cursor)
+        process_resposta_cnpjs('16195097', cursor)
+        process_resposta_cnpjs('5478121', cursor)
+        process_resposta_cnpjs('8961647', cursor)
+        process_resposta_cnpjs('9206832', cursor)
+        process_resposta_cnpjs('10169300', cursor)
+        process_resposta_cnpjs('10099135', cursor)
+        process_resposta_cnpjs('10483698', cursor)
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
