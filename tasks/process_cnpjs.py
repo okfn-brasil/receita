@@ -100,14 +100,8 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_ente_federativo_responsavel']) + '\', '
 
                 #Realizar consulta complementar simples:
-                sql_simples = 'SELECT '
-                sql_simples = sql_simples + ' opcao_pelo_simples as simples_opcao_pelo_simples,'
-                sql_simples = sql_simples + ' data_opcao_pelo_simples as simples_data_opcao_pelo_simples,'
-                sql_simples = sql_simples + ' data_exclusao_pelo_simples as simples_data_exclusao_pelo_simples,'
-                sql_simples = sql_simples + ' opcao_pelo_mei as simples_opcao_pelo_mei,'
-                sql_simples = sql_simples + ' data_opcao_pelo_mei as simples_data_opcao_pelo_mei,'
-                sql_simples = sql_simples + ' data_exclusao_pelo_mei as simples_data_exclusao_pelo_mei '
-                sql_simples = sql_simples + f' from simples where cnpj_basico= \'{str(campos_cnpj['estabelecimento_cnpj_basico'])}\''
+                empresa_cnpj = str(campos_cnpj['empresa_cnpj'])
+                sql_simples = f'SELECT * from simples where cnpj_basico = \'{empresa_cnpj}\''
                 print(f'SQL: {sql_simples}')
                 if cursor is not None:
                     cursor.execute(sql_simples)
