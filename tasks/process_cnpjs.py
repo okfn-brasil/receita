@@ -106,7 +106,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 if cursor is not None:
                     cursor.execute(sql_simples)
                     results = cursor.fetchall()
-                    if results is not None:
+                    if results is not None and results != []:
                         resultado_simples = results[0]
                         if resultado_simples is not None:
                             sql_insert = sql_insert + '\'' + str(resultado_simples['opcao_pelo_simples']) + '\', '
@@ -131,7 +131,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                     if cursor is not None:
                         cursor.execute(sql_pais)
                         results = cursor.fetchall()
-                        if results is not None:
+                        if results is not None and results != []:
                             # SHould be a single result, fetch first
                             resultado_pais = results[0]
                             pais_descricao = resultado_pais['descricao']
