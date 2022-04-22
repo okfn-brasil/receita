@@ -40,7 +40,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' estabelecimento.telefone_fax as estabelecimento_telefone_fax,'
     sql = sql + ' estabelecimento.correio_eletronico as estabelecimento_correio_eletronico,'
     sql = sql + ' estabelecimento.situacao_especial as estabelecimento_situacao_especial,'
-    sql = sql + ' estabelecimento.data_situacao_especial as estabelecimento_data_situacao_especial,'
+    sql = sql + ' estabelecimento.data_situacao_especial as estabelecimento_data_situacao_especial'
     sql = sql + ' FROM empresa'
     sql = sql + ' INNER JOIN estabelecimento ON empresa.cnpj = estabelecimento.cnpj_basico'
     sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
@@ -118,7 +118,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                         sql_insert = sql_insert + '\'\', '
 
                 # Realizar a consulta complementar para o cnae
-                cnae_codigo = str(campos_cnpj['estabelecimento_cnae_fiscal']
+                cnae_codigo = str(campos_cnpj['estabelecimento_cnae_fiscal'])
                 if cnae_codigo != '':
                     # SQL a ser realizada para buscar as informações do país
                     sql_cnae = f'select * from cnae where codigo = \'{cnae_codigo}\''
@@ -219,7 +219,7 @@ if __name__ == "__main__":
     conn = conecta()
     if conn is not None:
         cursor = conn.cursor()
-        # Carrega a informação do CNPJ e dos sócios:
+        # Carrega a informação de testes do CNPJ :
         process_resposta_cnpjs('3727664', cursor)
         process_resposta_cnpjs('16212670', cursor)
         process_resposta_cnpjs('8682325', cursor)
