@@ -150,7 +150,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                             sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
                 else:
                     sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
-                
+
                 # Realizar consulta para busca dos municípios:
                 municipio_codigo = str(campos_cnpj['estabelecimento_municipio'])
                 if (municipio_codigo != '') and (pais_codigo != 'None'):
@@ -172,13 +172,18 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                             print(f'Erro! Município {municipio_codigo} não encontrado.')
                             sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\', '
                 else:
-                    sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\', '
+                    sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\' '
                 sql_insert = sql_insert + ')'
                 print(f'SQL Insert: \n{sql_insert}')
                 print(f'campos_cnpj: {campos_cnpj}')
                 print(f'campos_simples: {campos_simples}')
                 print(f'campos_pais: {campos_pais}')
                 print(f'campos_municipio: {campos_municipio}')
+                print('* Inserindo no banco [resposta_cnpj]...')
+                if cursor is not None:
+                    inserted = cursor.execute(sql_insert)
+                    if inserted is not None:
+                        print(f'Inseriu: {inserted}')
     pass
 
 def conecta():
