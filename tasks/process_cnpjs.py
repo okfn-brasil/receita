@@ -41,11 +41,8 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' estabelecimento.correio_eletronico as estabelecimento_correio_eletronico,'
     sql = sql + ' estabelecimento.situacao_especial as estabelecimento_situacao_especial,'
     sql = sql + ' estabelecimento.data_situacao_especial as estabelecimento_data_situacao_especial,'
-    sql = sql + ' cnae.codigo as cnae_codigo,'
-    sql = sql + ' cnae.descricao as cnae_descricao'
     sql = sql + ' FROM empresa'
     sql = sql + ' INNER JOIN estabelecimento ON empresa.cnpj = estabelecimento.cnpj_basico'
-    sql = sql + ' INNER JOIN cnae ON estabelecimento.cnae_fiscal = cnae.codigo'
     sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
     print(f'SQL a ser executado: \n {sql}')
     if cursor is not None:
@@ -119,6 +116,30 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                         sql_insert = sql_insert + '\'\', '
                         sql_insert = sql_insert + '\'\', '
                         sql_insert = sql_insert + '\'\', '
+
+                # Realizar a consulta complementar para o cnae
+                cnae_codigo = str(campos_cnpj['estabelecimento_cnae_fiscal']
+                if cnae_codigo != '':
+                    # SQL a ser realizada para buscar as informações do país
+                    sql_cnae = f'select * from cnae where codigo = \'{cnae_codigo}\''
+                    if cursor is not None:
+                        cursor.execute(sql_cnae)
+                        results = cursor.fetchall()
+                        if results is not None and results != []:
+                            # SHould be a single result, fetch first
+                            campos_cnae = results[0]
+                            if campos_cnae is not None:
+                                cnae_descricao = str(campos_cnae['descricao'])
+                                cnae_cod_desc = f'{cnae_codigo} - {cnae_descricao}'
+                            else:
+                                cnae_cod_desc = cnae_cod
+                            print(f'→ cnae: {cnae_cod_desc}')
+                            sql_insert = sql_insert + f'\'{cnae_cod_desc}\', '
+                        else:
+                            print(f'Erro! CNAE {cnae_codigo} não encontrado')
+                            sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal']) + '\', '
+                else:
+                    sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal']) + '\', '                    
 
                 # Realizar consulta à tabela país, caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
                 pais_codigo = str(campos_cnpj['estabelecimento_pais'])
