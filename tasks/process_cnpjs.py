@@ -62,7 +62,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 campos_cnpj = r.copy()
                 print(campos_cnpj)
                 # TODO: Salvar registro resposta_cnpj
-                sql_insert = 'INSERT into resposta_cnpj (estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv, estabelecimento_identificador_matriz_filial, estabelecimento_nome_fantasia, estabelecimento_situacao_cadastral, estabelecimento_data_situacao_cadastral, estabelecimento_motivo_situacao_cadastral, estabelecimento_nome_cidade_exterior, estabelecimento_data_inicio_atividade, estabelecimento_cnae_fiscal_secundario, estabelecimento_tipo_logradouro, estabelecimento_logradouro, estabelecimento_numero, estabelecimento_complemento, estabelecimento_bairro, estabelecimento_cep, estabelecimento_uf, estabelecimento_municipio, estabelecimento_ddd_telefone_1, estabelecimento_ddd_telefone_2, estabelecimento_ddd_telefone_fax, estabelecimento_correio_eletronico, estabelecimento_situacao_especial, estabelecimento_data_situacao_especial, empresa_razao_social, empresa_codigo_natureza_juridica, empresa_qualificacao_do_responsavel, empresa_capital_social, empresa_porte, empresa_ente_federativo_responsavel, simples_opcao_pelo_simples, simples_data_opcao_pelo_simples, simples_data_exclusao_pelo_simples, simples_opcao_pelo_mei, simples_data_opcao_pelo_mei, simples_data_exclusao_pelo_mei, cnae, pais, municipio)'
+                sql_insert = 'INSERT into resposta_cnpj (estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv, estabelecimento_identificador_matriz_filial, estabelecimento_nome_fantasia, estabelecimento_situacao_cadastral, estabelecimento_data_situacao_cadastral, estabelecimento_motivo_situacao_cadastral, estabelecimento_nome_cidade_exterior, estabelecimento_data_inicio_atividade, estabelecimento_cnae_fiscal_secundario, estabelecimento_tipo_logradouro, estabelecimento_logradouro, estabelecimento_numero, estabelecimento_complemento, estabelecimento_bairro, estabelecimento_cep, estabelecimento_uf, estabelecimento_ddd_telefone_1, estabelecimento_ddd_telefone_2, estabelecimento_ddd_telefone_fax, estabelecimento_correio_eletronico, estabelecimento_situacao_especial, estabelecimento_data_situacao_especial, empresa_razao_social, empresa_codigo_natureza_juridica, empresa_qualificacao_do_responsavel, empresa_capital_social, empresa_porte, empresa_ente_federativo_responsavel, simples_opcao_pelo_simples, simples_data_opcao_pelo_simples, simples_data_exclusao_pelo_simples, simples_opcao_pelo_mei, simples_data_opcao_pelo_mei, simples_data_exclusao_pelo_mei, cnae, pais, municipio)'
                 sql_insert = sql_insert + ' VALUES ('
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnpj_basico']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnpj_ordem']) + '\', '
@@ -82,7 +82,6 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_bairro']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cep']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_uf']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_ddd_1']) + str(campos_cnpj['estabelecimento_telefone_1']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_ddd_2']) + str(campos_cnpj['estabelecimento_telefone_2']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_ddd_fax']) + str(campos_cnpj['estabelecimento_telefone_fax']) + '\', '
@@ -167,10 +166,10 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                             else:
                                 municipio_cod_desc = municipio_cod
                             print(f'→ municipio: {municipio_cod_desc}')
-                            sql_insert = sql_insert + f'\'{municipio_cod_desc}\', '
+                            sql_insert = sql_insert + f'\'{municipio_cod_desc}\' '
                         else:
                             print(f'Erro! Município {municipio_codigo} não encontrado.')
-                            sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\', '
+                            sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\' '
                 else:
                     sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\' '
                 sql_insert = sql_insert + ')'

@@ -263,8 +263,6 @@ create table resposta_cnpj (
  	estabelecimento_cep VARCHAR(11),
  	-- SIGLA DA UNIDADE DA FEDERAÇÃO EM QUE SE ENCONTRA O ESTABELECIMENTO
  	estabelecimento_uf VARCHAR(2),
- 	-- CÓDIGO DO MUNICÍPIO DE JURISDIÇÃO ONDE SE ENCONTRA O ESTABELECIMENTO
- 	estabelecimento_municipio VARCHAR,
  	-- CONTÉM O DDD 1 E O NÚMERO DO TELEFONE telefone_1
 	estabelecimento_ddd_telefone_1 VARCHAR(16),
  	-- CONTÉM O DDD 2 E O NÚMERO DO TELEFONE telefone_2
