@@ -42,9 +42,12 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' estabelecimento.situacao_especial as estabelecimento_situacao_especial,'
     sql = sql + ' estabelecimento.data_situacao_especial as estabelecimento_data_situacao_especial'
     sql = sql + ' FROM empresa'
-    sql = sql + ' INNER JOIN estabelecimento ON empresa.cnpj = estabelecimento.cnpj_basico'
-    sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
-    print(f'SQL a ser executado: \n {sql}')
+    sql = sql + ' INNER JOIN estabelecimento ON empresa.cnpj = estabelecimento.cnpj_basico '
+    # Load all CNPJs
+    if cnpj_basico is None:
+        sql = sql + f' WHERE empresa.cnpj =  estabelecimento.cnpj_basico limit 100000;'
+    else:
+        sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
     if cursor is not None:
         cursor.execute(sql)
         results = cursor.fetchall()
@@ -57,15 +60,14 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
             print(f'A busca retornou {len(results)} resultados:')
             for r in results:
                 campos_cnpj = r.copy()
-                print(campos_cnpj)
-                # TODO: Salvar registro resposta_cnpj
                 sql_insert = 'INSERT into resposta_cnpj (estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv, estabelecimento_identificador_matriz_filial, estabelecimento_nome_fantasia, estabelecimento_situacao_cadastral, estabelecimento_data_situacao_cadastral, estabelecimento_motivo_situacao_cadastral, estabelecimento_nome_cidade_exterior, estabelecimento_data_inicio_atividade, estabelecimento_cnae_fiscal_secundario, estabelecimento_tipo_logradouro, estabelecimento_logradouro, estabelecimento_numero, estabelecimento_complemento, estabelecimento_bairro, estabelecimento_cep, estabelecimento_uf, estabelecimento_ddd_telefone_1, estabelecimento_ddd_telefone_2, estabelecimento_ddd_telefone_fax, estabelecimento_correio_eletronico, estabelecimento_situacao_especial, estabelecimento_data_situacao_especial, empresa_razao_social, empresa_codigo_natureza_juridica, empresa_qualificacao_do_responsavel, empresa_capital_social, empresa_porte, empresa_ente_federativo_responsavel, simples_opcao_pelo_simples, simples_data_opcao_pelo_simples, simples_data_exclusao_pelo_simples, simples_opcao_pelo_mei, simples_data_opcao_pelo_mei, simples_data_exclusao_pelo_mei, cnae, pais, municipio)'
                 sql_insert = sql_insert + ' VALUES ('
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnpj_basico']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnpj_ordem']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnpj_dv']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_identificador_matriz_filial']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_nome_fantasia']) + '\', '
+                estabelecimento_nome_fantasia = str(campos_cnpj['estabelecimento_nome_fantasia']).replace('\'', '`')
+                sql_insert = sql_insert + '\'' + estabelecimento_nome_fantasia + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_situacao_cadastral']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_data_situacao_cadastral']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_motivo_situacao_cadastral']) + '\', '
@@ -73,29 +75,51 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_data_inicio_atividade']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal_secundario']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_tipo_logradouro']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_logradouro']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_numero']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_complemento']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_bairro']) + '\', '
+                # Evitando ocorrências de  aspas no texto dos logradouros
+                estabelecimento_logradouro = str(campos_cnpj['estabelecimento_logradouro']).replace('\'', '`')
+                sql_insert = sql_insert + '\'' + estabelecimento_logradouro + '\', '
+                estabelecimento_numero = str(campos_cnpj['estabelecimento_numero']).replace('\'', '')
+                sql_insert = sql_insert + '\'' + estabelecimento_numero + '\', '
+                estabelecimento_complemento = str(campos_cnpj['estabelecimento_complemento']).replace('\'', '`')
+                sql_insert = sql_insert + '\'' + estabelecimento_complemento + '\', '
+                estabelecimento_bairro = str(campos_cnpj['estabelecimento_bairro']).replace('\'', '`')
+                sql_insert = sql_insert + '\'' + estabelecimento_bairro + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cep']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_uf']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_ddd_1']) + str(campos_cnpj['estabelecimento_telefone_1']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_ddd_2']) + str(campos_cnpj['estabelecimento_telefone_2']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_ddd_fax']) + str(campos_cnpj['estabelecimento_telefone_fax']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_correio_eletronico']) + '\', '
+                # Tratando campos de telefone
+                estabelecimento_ddd_telefone_1 = str(campos_cnpj['estabelecimento_ddd_1'])[:-2] + str(campos_cnpj['estabelecimento_telefone_1'])
+                if 'None' in estabelecimento_ddd_telefone_1:
+                    sql_insert = sql_insert + '\'\', '
+                else:
+                    sql_insert = sql_insert + '\'' + estabelecimento_ddd_telefone_1 + '\', '
+                estabelecimento_ddd_telefone_2 = str(campos_cnpj['estabelecimento_ddd_2'])[:-2] + str(campos_cnpj['estabelecimento_telefone_2'])
+                if 'None' in estabelecimento_ddd_telefone_2:
+                    sql_insert = sql_insert + '\'\', '
+                else:
+                    sql_insert = sql_insert + '\'' + estabelecimento_ddd_telefone_2 + '\', '
+                estabelecimento_ddd_telefone_fax = str(campos_cnpj['estabelecimento_ddd_fax'])[:-2] + str(campos_cnpj['estabelecimento_telefone_fax'])
+                if 'None' in estabelecimento_ddd_telefone_fax:
+                    sql_insert = sql_insert + '\'\', '
+                else:
+                    sql_insert = sql_insert + '\'' + estabelecimento_ddd_telefone_fax + '\', '
+                estabelecimento_correio_eletronico = str(campos_cnpj['estabelecimento_correio_eletronico'])
+                estabelecimento_correio_eletronico = estabelecimento_correio_eletronico.replace('\"', '')
+                estabelecimento_correio_eletronico = estabelecimento_correio_eletronico.replace('\'', '')
+                sql_insert = sql_insert + '\'' + estabelecimento_correio_eletronico + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_situacao_especial']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_data_situacao_especial']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_razao_social']) + '\', '
+                empresa_razao_social =  str(campos_cnpj['empresa_razao_social']).replace('\'', '`')
+                sql_insert = sql_insert + '\'' + empresa_razao_social + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_codigo_natureza_juridica']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_qualificacao_do_responsavel']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_capital_social']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_porte']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['empresa_ente_federativo_responsavel']) + '\', '
+                empresa_ente_federativo_responsavel = str(campos_cnpj['empresa_ente_federativo_responsavel']).replace('\'', '')
+                sql_insert = sql_insert + '\'' + empresa_ente_federativo_responsavel + '\', '
 
                 #Realizar consulta complementar simples:
                 empresa_cnpj = str(campos_cnpj['empresa_cnpj'])
                 sql_simples = f'SELECT * from simples where cnpj_basico = \'{empresa_cnpj}\''
-                print(f'SQL: {sql_simples}')
                 if cursor is not None:
                     cursor.execute(sql_simples)
                     results = cursor.fetchall()
@@ -133,7 +157,6 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                                 cnae_cod_desc = f'{cnae_codigo} - {cnae_descricao}'
                             else:
                                 cnae_cod_desc = cnae_cod
-                            print(f'→ cnae: {cnae_cod_desc}')
                             sql_insert = sql_insert + f'\'{cnae_cod_desc}\', '
                         else:
                             print(f'Erro! CNAE {cnae_codigo} não encontrado')
@@ -163,7 +186,6 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                                 pais_cod_desc = f'{pais_codigo} - {pais_descricao}'
                             else:
                                 pais_cod_desc = pais_cod
-                            print(f'→ pais: {pais_cod_desc}')
                             sql_insert = sql_insert + f'\'{pais_cod_desc}\', '
                         else:
                             print(f'Erro! País {pais_codigo} não encontrado')
@@ -182,11 +204,10 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                             # SHould be a single result, fetch first
                             campos_municipio = results[0]
                             if campos_municipio is not None:
-                                municipio_descricao = str(campos_municipio['descricao'])
+                                municipio_descricao = str(campos_municipio['descricao']).replace('\'','`')
                                 municipio_cod_desc = f'{municipio_codigo} - {municipio_descricao}'
                             else:
                                 municipio_cod_desc = municipio_cod
-                            print(f'→ municipio: {municipio_cod_desc}')
                             sql_insert = sql_insert + f'\'{municipio_cod_desc}\' '
                         else:
                             print(f'Erro! Município {municipio_codigo} não encontrado.')
@@ -195,15 +216,15 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                     sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\' '
                 sql_insert = sql_insert + ')'
                 print(f'SQL Insert: \n{sql_insert}')
-                print(f'campos_cnpj: {campos_cnpj}')
-                print(f'campos_simples: {campos_simples}')
-                print(f'campos_pais: {campos_pais}')
-                print(f'campos_municipio: {campos_municipio}')
-                print('* Inserindo no banco [resposta_cnpj]...')
+                # print(f'campos_cnpj: {campos_cnpj}')
+                # print(f'campos_simples: {campos_simples}')
+                # print(f'campos_pais: {campos_pais}')
+                # print(f'campos_municipio: {campos_municipio}')
+                # print('* Inserindo no banco [resposta_cnpj]...')
                 if cursor is not None:
                     inserted = cursor.execute(sql_insert)
                     if inserted is not None:
-                        print(f'Inseriu: {inserted}')
+                        print(f'→ Inseriu: {inserted}')
     pass
 
 def conecta():
@@ -220,16 +241,17 @@ if __name__ == "__main__":
     if conn is not None:
         cursor = conn.cursor()
         # Carrega a informação de testes do CNPJ :
-        process_resposta_cnpjs('3727664', cursor)
-        process_resposta_cnpjs('16212670', cursor)
-        process_resposta_cnpjs('8682325', cursor)
-        process_resposta_cnpjs('16195097', cursor)
-        process_resposta_cnpjs('5478121', cursor)
-        process_resposta_cnpjs('8961647', cursor)
-        process_resposta_cnpjs('9206832', cursor)
-        process_resposta_cnpjs('10169300', cursor)
-        process_resposta_cnpjs('10099135', cursor)
-        process_resposta_cnpjs('10483698', cursor)
+        #process_resposta_cnpjs('3727664', cursor)
+        #process_resposta_cnpjs('16212670', cursor)
+        #process_resposta_cnpjs('8682325', cursor)
+        #process_resposta_cnpjs('16195097', cursor)
+        #process_resposta_cnpjs('5478121', cursor)
+        #process_resposta_cnpjs('8961647', cursor)
+        #process_resposta_cnpjs('9206832', cursor)
+        #process_resposta_cnpjs('10169300', cursor)
+        #process_resposta_cnpjs('10099135', cursor)
+        #process_resposta_cnpjs('10483698', cursor)
+        process_resposta_cnpjs(None, cursor)
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
