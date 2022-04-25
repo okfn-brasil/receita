@@ -1,8 +1,20 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+# Retorna um objeto com a resposta do banco
+def get_all_cnpj_ids(cursor=None):
+    # Executa uma consulta para pegar todos os identificadores únicos de CNPJ que serão utilizados nas buscas:
+    sql = 'SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj'
+    if cursor is not None:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        if results is not None:
+            return results:
+
+
 # Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento e seus socios
 def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
+    print(f'Iniciando processamento CNPJ {cnpj_basico}')
     # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
     sql = 'SELECT empresa.cnpj as empresa_cnpj,'
     sql = sql + ' empresa.razao_social as empresa_razao_social,'
@@ -43,11 +55,8 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' estabelecimento.data_situacao_especial as estabelecimento_data_situacao_especial'
     sql = sql + ' FROM empresa'
     sql = sql + ' INNER JOIN estabelecimento ON empresa.cnpj = estabelecimento.cnpj_basico '
-    # Load all CNPJs
-    if cnpj_basico is None:
-        sql = sql + f' WHERE empresa.cnpj =  estabelecimento.cnpj_basico limit 100000;'
-    else:
-        sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
+    sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
+
     if cursor is not None:
         cursor.execute(sql)
         results = cursor.fetchall()
@@ -120,49 +129,47 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 #Realizar consulta complementar simples:
                 empresa_cnpj = str(campos_cnpj['empresa_cnpj'])
                 sql_simples = f'SELECT * from simples where cnpj_basico = \'{empresa_cnpj}\''
-                if cursor is not None:
-                    cursor.execute(sql_simples)
-                    results = cursor.fetchall()
-                    if results is not None and results != []:
-                        campos_simples = results[0]
-                        if campos_simples is not None:
-                            sql_insert = sql_insert + '\'' + str(campos_simples['opcao_pelo_simples']) + '\', '
-                            sql_insert = sql_insert + '\'' + str(campos_simples['data_opcao_pelo_simples']) + '\', '
-                            sql_insert = sql_insert + '\'' + str(campos_simples['data_exclusao_pelo_simples']) + '\', '
-                            sql_insert = sql_insert + '\'' + str(campos_simples['opcao_pelo_mei']) + '\', '
-                            sql_insert = sql_insert + '\'' + str(campos_simples['data_opcao_pelo_mei']) + '\', '
-                            sql_insert = sql_insert + '\'' + str(campos_simples['data_exclusao_pelo_mei']) + '\', '
-                    else:
-                        # Se não encontrou informações sobre o simples, deixa em branco
-                        sql_insert = sql_insert + '\'\', '
-                        sql_insert = sql_insert + '\'\', '
-                        sql_insert = sql_insert + '\'\', '
-                        sql_insert = sql_insert + '\'\', '
-                        sql_insert = sql_insert + '\'\', '
-                        sql_insert = sql_insert + '\'\', '
+                cursor.execute(sql_simples)
+                results = cursor.fetchall()
+                if results is not None and results != []:
+                    campos_simples = results[0]
+                    if campos_simples is not None:
+                        sql_insert = sql_insert + '\'' + str(campos_simples['opcao_pelo_simples']) + '\', '
+                        sql_insert = sql_insert + '\'' + str(campos_simples['data_opcao_pelo_simples']) + '\', '
+                        sql_insert = sql_insert + '\'' + str(campos_simples['data_exclusao_pelo_simples']) + '\', '
+                        sql_insert = sql_insert + '\'' + str(campos_simples['opcao_pelo_mei']) + '\', '
+                        sql_insert = sql_insert + '\'' + str(campos_simples['data_opcao_pelo_mei']) + '\', '
+                        sql_insert = sql_insert + '\'' + str(campos_simples['data_exclusao_pelo_mei']) + '\', '
+                else:
+                    # Se não encontrou informações sobre o simples, deixa em branco
+                    sql_insert = sql_insert + '\'\', '
+                    sql_insert = sql_insert + '\'\', '
+                    sql_insert = sql_insert + '\'\', '
+                    sql_insert = sql_insert + '\'\', '
+                    sql_insert = sql_insert + '\'\', '
+                    sql_insert = sql_insert + '\'\', '
 
                 # Realizar a consulta complementar para o cnae
                 cnae_codigo = str(campos_cnpj['estabelecimento_cnae_fiscal'])
                 if cnae_codigo != '':
                     # SQL a ser realizada para buscar as informações do país
                     sql_cnae = f'select * from cnae where codigo = \'{cnae_codigo}\''
-                    if cursor is not None:
-                        cursor.execute(sql_cnae)
-                        results = cursor.fetchall()
-                        if results is not None and results != []:
-                            # SHould be a single result, fetch first
-                            campos_cnae = results[0]
-                            if campos_cnae is not None:
-                                cnae_descricao = str(campos_cnae['descricao'])
-                                cnae_cod_desc = f'{cnae_codigo} - {cnae_descricao}'
-                            else:
-                                cnae_cod_desc = cnae_cod
-                            sql_insert = sql_insert + f'\'{cnae_cod_desc}\', '
+                    cursor.execute(sql_cnae)
+                    results = cursor.fetchall()
+                    if results is not None and results != []:
+                        # SHould be a single result, fetch first
+                        campos_cnae = results[0]
+                        if campos_cnae is not None:
+                            cnae_descricao = str(campos_cnae['descricao'])
+                            cnae_cod_desc = f'{cnae_codigo} - {cnae_descricao}'
                         else:
-                            print(f'Erro! CNAE {cnae_codigo} não encontrado')
-                            sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal']) + '\', '
+                            cnae_cod_desc = cnae_cod
+                        sql_insert = sql_insert + f'\'{cnae_cod_desc}\', '
+                    else:
+                        print(f'Erro! CNAE {cnae_codigo} não encontrado')
+                        sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal']) + '\', '
                 else:
-                    sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal']) + '\', '                    
+                    sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal']) + '\', '
 
                 # Realizar consulta à tabela país, caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
                 pais_codigo = str(campos_cnpj['estabelecimento_pais'])
@@ -175,21 +182,20 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                         pais_codigo = pais_codigo[:-2]
                     # SQL a ser realizada para buscar as informações do país
                     sql_pais = f'select * from pais where codigo = \'{pais_codigo}\''
-                    if cursor is not None:
-                        cursor.execute(sql_pais)
-                        results = cursor.fetchall()
-                        if results is not None and results != []:
-                            # SHould be a single result, fetch first
-                            campos_pais = results[0]
-                            if campos_pais is not None:
-                                pais_descricao = str(campos_pais['descricao'])
-                                pais_cod_desc = f'{pais_codigo} - {pais_descricao}'
-                            else:
-                                pais_cod_desc = pais_cod
-                            sql_insert = sql_insert + f'\'{pais_cod_desc}\', '
+                    cursor.execute(sql_pais)
+                    results = cursor.fetchall()
+                    if results is not None and results != []:
+                        # SHould be a single result, fetch first
+                        campos_pais = results[0]
+                        if campos_pais is not None:
+                            pais_descricao = str(campos_pais['descricao'])
+                            pais_cod_desc = f'{pais_codigo} - {pais_descricao}'
                         else:
-                            print(f'Erro! País {pais_codigo} não encontrado')
-                            sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
+                            pais_cod_desc = pais_cod
+                        sql_insert = sql_insert + f'\'{pais_cod_desc}\', '
+                    else:
+                        print(f'Erro! País {pais_codigo} não encontrado')
+                        sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
                 else:
                     sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_pais']) + '\', '
 
@@ -221,10 +227,9 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 # print(f'campos_pais: {campos_pais}')
                 # print(f'campos_municipio: {campos_municipio}')
                 # print('* Inserindo no banco [resposta_cnpj]...')
-                if cursor is not None:
-                    inserted = cursor.execute(sql_insert)
-                    if inserted is not None:
-                        print(f'→ Inseriu: {inserted}')
+                cursor.execute(sql_insert)
+    else:
+        print("Cursor is None")
     pass
 
 def conecta():
@@ -251,7 +256,10 @@ if __name__ == "__main__":
         #process_resposta_cnpjs('10169300', cursor)
         #process_resposta_cnpjs('10099135', cursor)
         #process_resposta_cnpjs('10483698', cursor)
-        process_resposta_cnpjs(None, cursor)
+        # Lista de todos os cnpjs a serem processados:
+        lista_cnpj = get_all_cnpj_ids()
+        for cnpj in lista_cnpj:
+            process_resposta_cnpjs(cnpj['cnpj'], cursor)
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
