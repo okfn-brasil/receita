@@ -1,20 +1,27 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-# Retorna um objeto com a resposta do banco
-def get_all_cnpj_ids(cursor=None):
-    # Executa uma consulta para pegar todos os identificadores únicos de CNPJ que serão utilizados nas buscas:
-    sql = 'SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj'
+def get_n_total_cnpj(cursor=None):
+    # Executa uma consulta para pegar a quantidade total de CNPJs a processar
+    sql = 'SELECT count(cnpj) as count_cnpj from empresa;'
     if cursor is not None:
         cursor.execute(sql)
         results = cursor.fetchall()
         if results is not None:
-            return results:
+            return results[0]['count_cnpj']
 
+# Retorna um objeto com a resposta do banco
+def get_all_cnpj_ids(cursor=None, offset=0, limit=1000):
+    # Executa uma consulta para pegar todos os identificadores únicos de CNPJ que serão utilizados nas buscas:
+    sql = f'SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj limit {limit} offset {offset}'
+    if cursor is not None:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        if results is not None:
+            return results
 
 # Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento e seus socios
 def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
-    print(f'Iniciando processamento CNPJ {cnpj_basico}')
     # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
     sql = 'SELECT empresa.cnpj as empresa_cnpj,'
     sql = sql + ' empresa.razao_social as empresa_razao_social,'
@@ -80,7 +87,8 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_situacao_cadastral']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_data_situacao_cadastral']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_motivo_situacao_cadastral']) + '\', '
-                sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_nome_cidade_exterior']) + '\', '
+                estabelecimento_nome_cidade_exterior = str(campos_cnpj['estabelecimento_nome_cidade_exterior']).replace('\'', '`')
+                sql_insert = sql_insert + '\'' + estabelecimento_nome_cidade_exterior + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_data_inicio_atividade']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal_secundario']) + '\', '
                 sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_tipo_logradouro']) + '\', '
@@ -221,12 +229,6 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 else:
                     sql_insert = sql_insert + '\'' + str(campos_cnpj['estabelecimento_municipio']) + '\' '
                 sql_insert = sql_insert + ')'
-                print(f'SQL Insert: \n{sql_insert}')
-                # print(f'campos_cnpj: {campos_cnpj}')
-                # print(f'campos_simples: {campos_simples}')
-                # print(f'campos_pais: {campos_pais}')
-                # print(f'campos_municipio: {campos_municipio}')
-                # print('* Inserindo no banco [resposta_cnpj]...')
                 cursor.execute(sql_insert)
     else:
         print("Cursor is None")
@@ -256,10 +258,21 @@ if __name__ == "__main__":
         #process_resposta_cnpjs('10169300', cursor)
         #process_resposta_cnpjs('10099135', cursor)
         #process_resposta_cnpjs('10483698', cursor)
+        
+        # Total de CNPJs a processar:
+        n_total_cnpjs = get_n_total_cnpj(cursor)
+        n_total_cnpjs = int(n_total_cnpjs)
+        print(f'Total de CNPJs a processar: {n_total_cnpjs}')
         # Lista de todos os cnpjs a serem processados:
-        lista_cnpj = get_all_cnpj_ids()
-        for cnpj in lista_cnpj:
-            process_resposta_cnpjs(cnpj['cnpj'], cursor)
+        # contador de blocos de CNPJs
+        offset = 0
+        block_limit = 10000
+        while ( offset < n_total_cnpjs):
+            lista_cnpj = get_all_cnpj_ids(cursor, offset, block_limit)
+            for cnpj in lista_cnpj:
+                process_resposta_cnpjs(cnpj['empresa_cnpj'], cursor)
+            # Incrementa o bloco
+            offset = offset + block_limit
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
