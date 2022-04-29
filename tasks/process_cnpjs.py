@@ -1,5 +1,6 @@
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2 import extras
 
 def get_n_total_cnpj(cursor=None):
     # Executa uma consulta para pegar a quantidade total de CNPJs a processar
@@ -11,7 +12,8 @@ def get_n_total_cnpj(cursor=None):
             return results[0]['count_cnpj']
 
 # Retorna um objeto com a resposta do banco
-def get_all_cnpj_ids(cursor=None, offset=0, limit=1000):
+def get_all_cnpj_ids(cursor=None, offset=0, limit=10000):
+    print(f'Offset: {offset} | Limit: {limit}')
     # Executa uma consulta para pegar todos os identificadores únicos de CNPJ que serão utilizados nas buscas:
     sql = f'SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj limit {limit} offset {offset}'
     if cursor is not None:
@@ -23,13 +25,13 @@ def get_all_cnpj_ids(cursor=None, offset=0, limit=1000):
 def batch_insert_resposta_cnpj(cursor, resposta_cnpj_lista_valores):
     # Consulta adaptada para inserção via execute_batch
     sql_insert = 'INSERT into resposta_cnpj (estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv, estabelecimento_identificador_matriz_filial, estabelecimento_nome_fantasia, estabelecimento_situacao_cadastral, estabelecimento_data_situacao_cadastral, estabelecimento_motivo_situacao_cadastral, estabelecimento_nome_cidade_exterior, estabelecimento_data_inicio_atividade, estabelecimento_cnae_fiscal_secundario, estabelecimento_tipo_logradouro, estabelecimento_logradouro, estabelecimento_numero, estabelecimento_complemento, estabelecimento_bairro, estabelecimento_cep, estabelecimento_uf, estabelecimento_ddd_telefone_1, estabelecimento_ddd_telefone_2, estabelecimento_ddd_telefone_fax, estabelecimento_correio_eletronico, estabelecimento_situacao_especial, estabelecimento_data_situacao_especial, empresa_razao_social, empresa_codigo_natureza_juridica, empresa_qualificacao_do_responsavel, empresa_capital_social, empresa_porte, empresa_ente_federativo_responsavel, simples_opcao_pelo_simples, simples_data_opcao_pelo_simples, simples_data_exclusao_pelo_simples, simples_opcao_pelo_mei, simples_data_opcao_pelo_mei, simples_data_exclusao_pelo_mei, cnae, pais, municipio)'
-    sql_insert = sql_insert + ' VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
+    sql_insert = sql_insert + ' VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
     if cursor is not None and resposta_cnpj_lista_valores is not None:
         try:
-            batch_response = cursor.execute_batch(cursor, sql_insert, resposta_cnpj_lista_valores)
-            print(f'Batch insert executado: {batch_response}')
+            extras.execute_batch(cursor, sql_insert, resposta_cnpj_lista_valores)
+            print(f'Batch insert executado salvou {len(resposta_cnpj_lista_valores)}')
         except Exception as e:
-            print(e)
+            print('Erro de inserção batch: ' + str(e))
 
 # Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento e seus socios
 def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
@@ -81,7 +83,7 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
         # Armazena os campos a serem salvos na tabela de resposta_cnpj
         resposta_cnpj = {}
         campos_cnpj = {}
-        if results is not None:
+        if results is not None and results != []:
             r = results[0]
             campos_cnpj = r.copy()
             # Sanitização e montagem dos campos compostos salvando num objeto único resposta_cnpj a ser submetido
@@ -135,12 +137,11 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 if campos_natureza_juridica is None:
                     resposta_cnpj['empresa_codigo_natureza_juridica'] = ''
                 else:
-                    resposta_cnpj['empresa_codigo_natureza_juridica'] = str(empresa_codigo_natureza_juridica) + ' - ' + campos_natureza['descricao']
+                    resposta_cnpj['empresa_codigo_natureza_juridica'] = str(empresa_codigo_natureza_juridica) + ' - ' + campos_natureza_juridica['descricao']
             resposta_cnpj['empresa_qualificacao_do_responsavel'] = campos_cnpj['empresa_qualificacao_do_responsavel']
             resposta_cnpj['empresa_capital_social'] = campos_cnpj['empresa_capital_social']
             resposta_cnpj['empresa_porte'] = campos_cnpj['empresa_porte']
             resposta_cnpj['empresa_ente_federativo_responsavel'] = str(campos_cnpj['empresa_ente_federativo_responsavel']).replace('\'', '')
-             empresa_ente_federativo_responsavel
             # Realizar consulta complementar simples:
             empresa_cnpj = str(campos_cnpj['empresa_cnpj'])
             sql_simples = f'SELECT * from simples where cnpj_basico = \'{empresa_cnpj}\''
@@ -162,6 +163,14 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                     resposta_cnpj['simples_opcao_pelo_mei'] = campos_simples['opcao_pelo_mei']
                     resposta_cnpj['simples_data_opcao_pelo_mei'] = campos_simples['data_opcao_pelo_mei']
                     resposta_cnpj['simples_data_exclusao_pelo_mei'] = campos_simples['data_exclusao_pelo_mei']
+            else:
+                resposta_cnpj['simples_opcao_pelo_simples'] = ''
+                resposta_cnpj['simples_data_opcao_pelo_simples'] = ''
+                resposta_cnpj['simples_data_exclusao_pelo_simples'] = ''
+                resposta_cnpj['simples_opcao_pelo_mei'] = ''
+                resposta_cnpj['simples_data_opcao_pelo_mei'] = ''
+                resposta_cnpj['simples_data_exclusao_pelo_mei'] = ''
+
             # Realizar a consulta complementar para o cnae
             cnae_codigo = str(campos_cnpj['estabelecimento_cnae_fiscal'])
             if cnae_codigo != '':
@@ -172,12 +181,13 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
                 if results is not None and results != []:
                     # SHould be a single result, fetch first
                     campos_cnae = results[0]
+                    cnae_cod_desc = ''
                     if campos_cnae is not None:
                         cnae_descricao = str(campos_cnae['descricao'])
                         cnae_cod_desc = f'{cnae_codigo} - {cnae_descricao}'
                     else:
-                        cnae_cod_desc = cnae_cod
-                    resposta_cnpj['cnae'] = cnae_cod_desc}
+                        cnae_cod_desc = cnae_codigo
+                    resposta_cnpj['cnae'] = cnae_cod_desc
                 else:
                     print(f'Erro! CNAE {cnae_codigo} não encontrado')
                     resposta_cnpj['cnae'] =  '\'' + str(campos_cnpj['estabelecimento_cnae_fiscal']) + '\''
@@ -259,19 +269,21 @@ if __name__ == "__main__":
         # Lista de todos os cnpjs a serem processados:
         # contador de blocos de CNPJs
         offset = 0
-        block_limit = 5000
+        block_size = 10000
         # lista de objetos a serem salvos em uma FANTASIA
         while ( offset < n_total_cnpjs):
             lista_resposta_cnpj = []
             # Pega uma lista de cnpjs da fatia
-            lista_cnpj = get_all_cnpj_ids(cursor, offset, block_limit)
+            lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
+            print(f'Processando {len(lista_cnpj)} registros')
             for cnpj in lista_cnpj:
                 resposta_cnpj = process_resposta_cnpjs(cnpj['empresa_cnpj'], cursor)
-                lista_resposta_cnpj.append(resposta_cnpj)
+                if resposta_cnpj is not None:
+                    lista_resposta_cnpj.append(list(resposta_cnpj.values()))
             # Insere os registros do bloco no BRANCO
             batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
             # Incrementa o bloco
-            offset = offset + block_limit
+            offset = offset + block_size
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
