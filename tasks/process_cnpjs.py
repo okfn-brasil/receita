@@ -33,7 +33,17 @@ def batch_insert_resposta_cnpj(cursor, resposta_cnpj_lista_valores):
         except Exception as e:
             print('Erro de inserção batch: ' + str(e))
 
-# Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento e seus socios
+def batch_insert_resposta_socios(cursor, lista_resposta_socios):
+    # Consulta adaptada para inserção via execute_batch
+    sql_insert = 'INSERT into resposta_socios (cnpj_basico, identificador_socio, razao_social, cnpj_cpf_socio, qualificacao_socio, data_entrada_sociedade, pais_socio_estrangeiro, numero_cpf_representante_legal, nome_representante_legal, codigo_qualificacao_representante_legal, faixa_etaria) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
+    if cursor is not None and lista_resposta_socios is not None:
+        try:
+            extras.execute_batch(cursor, sql_insert, lista_resposta_socios)
+            print(f'Batch insert executado salvou {len(lista_resposta_socios)}')
+        except Exception as e:
+            print('Erro de inserção batch: ' + str(e))
+
+# Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento
 def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
     sql = 'SELECT empresa.cnpj as empresa_cnpj,'
@@ -249,6 +259,90 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
         return None
     pass
 
+
+# Processar a partir de um CNPJ as tabelas relacionadas aos sócios da empresa
+def process_resposta_socios(cnpj_basico: str, cursor=None):
+    # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
+    sql = 'SELECT socio.cnpj_basico as socio_cnpj_basico,'
+    sql = sql + ' socio.identificador_socio as socio_identificador_socio,'
+    sql = sql + ' socio.razao_social as socio_razao_social,'
+    sql = sql + ' socio.cnpj_cpf_socio as socio_cnpj_cpf_socio,'
+    sql = sql + ' socio.codigo_qualificacao_socio as socio_codigo_qualificacao_socio,'
+    sql = sql + ' socio.data_entrada_sociedade as socio_data_entrada_sociedade,'
+    sql = sql + ' socio.codigo_pais_socio_estrangeiro as socio_codigo_pais_socio_estrangeiro,'
+    sql = sql + ' socio.numero_cpf_representante_legal as socio_numero_cpf_representante_legal,'
+    sql = sql + ' socio.nome_representante_legal as socio.nome_representante_legal,'
+    sql = sql + ' socio.codigo_qualificacao_representante_legal as socio_codigo_qualificacao_representante_legal,'
+    sql = sql + ' socio.faixa_etaria as socio_faixa_etaria'
+    sql = sql + ' FROM socio'
+    sql = sql + ' INNER JOIN empresa ON socio.cnpj_basico = empresa.cnpj'
+    sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
+
+    if cursor is not None:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        # Armazena os campos a serem salvos na tabela de resposta_socios
+        resposta_socios = {}
+        campos_socios = {}
+        lista_resposta_socios = []
+
+        if results is not None and results != []:
+            for r in results:
+                campos_socios = r.copy()
+                # Sanitização e montagem dos campos compostos salvando uma linha para cada sócio do CNPJ a ser submetida na tabela resposta_socios
+                resposta_socios['socio_cnpj_basico'] = campos_socios['socio_cnpj_basico']
+                resposta_socios['socio_identificador_socio'] = campos_socios['socio_identificador_socio']
+                resposta_socios['socio_razao_social'] = campos_socios['socio_razao_social']
+                resposta_socios['socio_cnpj_cpf_socio'] = campos_socios['socio_cnpj_cpf_socio']
+                # TODO run other select to try to fetch data
+                socio_codigo_qualificacao_socio = campos_socios['socio_codigo_qualificacao_socio']
+                if socio_codigo_qualificacao_socio is not None:
+                    sql_qualificacao_socio = f'SELECT from qualificacao_socio where codigo = \'{socio_codigo_qualificacao_socio}\''
+                    cursor.execute(sql)
+                    results = cursor.fetchall()
+                    if results is not None and results != []:
+                        r = results[0]
+                        if r is not None:
+                            socio_codigo_qualificacao_socio = socio_codigo_qualificacao_socio + ' - ' + r['descricao']
+                            resposta_socios['socio_codigo_qualificacao_socio'] = socio_codigo_qualificacao_socio
+                resposta_socios['socio_data_entrada_sociedade'] = campos_socios['socio_data_entrada_sociedade']
+
+                # Realizar consulta à tabela país, caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
+                pais_codigo = str(campos_socios['socio_codigo_pais_socio_estrangeiro'])
+                if pais_codigo != '':
+                    # Brasil
+                    if pais_codigo == 'None':
+                        pais_codigo = '105'
+                    else:
+                        # Remove '.0'
+                        pais_codigo = pais_codigo[:-2]
+                    # SQL a ser realizada para buscar as informações do país
+                    sql_pais = f'select * from pais where codigo = \'{pais_codigo}\''
+                    cursor.execute(sql_pais)
+                    results = cursor.fetchall()
+                    if results is not None and results != []:
+                        # SHould be a single result, fetch first
+                        campos_pais = results[0]
+                        if campos_pais is not None:
+                            pais_descricao = str(campos_pais['descricao'])
+                            pais_cod_desc = f'{pais_codigo} - {pais_descricao}'
+                        else:
+                            pais_cod_desc = pais_cod
+                        resposta_socios['pais_socio_estrangeiro'] = f'\'{pais_cod_desc}\''
+                    else:
+                        print(f'Erro! País {pais_codigo} não encontrado')
+                        resposta_socios['pais_socio_estrangeiro'] = '\'' + pais_codigo + '\''
+                else:
+                    resposta_socios['pais_socio_estrangeiro'] = '\'' + str(campos_socios['socio_codigo_pais_socio_estrangeiro']) + '\''
+
+                resposta_socios['socio_numero_cpf_representante_legal'] = campos_socios['socio_numero_cpf_representante_legal']
+                resposta_socios['nome_representante_legal'] = campos_socios['nome_representante_legal']
+                resposta_socios['socio_codigo_qualificacao_representante_legal'] = campos_socios['socio_codigo_qualificacao_representante_legal']
+                resposta_socios['socio_faixa_etaria'] = campos_socios['socio_faixa_etaria']
+                lista_resposta_socios.append(list(resposta_socios.values()))
+            batch_insert_resposta_socios(cursor, lista_resposta_socios)
+    pass
+
 def conecta():
     try:
         conn = psycopg2.connect(database='qd_receita', user='postgres', password='change_here', host='localhost', port='5432', cursor_factory=RealDictCursor)
@@ -280,7 +374,9 @@ if __name__ == "__main__":
                 resposta_cnpj = process_resposta_cnpjs(cnpj['empresa_cnpj'], cursor)
                 if resposta_cnpj is not None:
                     lista_resposta_cnpj.append(list(resposta_cnpj.values()))
-            # Insere os registros do bloco no BRANCO
+                # O processamento da resposta_socios para o CNPJ chama internamente o método de inserção em batch para inserir de uma vez todos os sócios relacionados ao CNPJ
+                process_resposta_socios(cnpj['empresa_cnpj'], cursor)
+            # Insere os registros do bloco no BANCO
             batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
             # Incrementa o bloco
             offset = offset + block_size

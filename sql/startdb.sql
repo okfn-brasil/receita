@@ -325,13 +325,46 @@ create table resposta_cnpj (
 	municipio VARCHAR(100)
 );
 
--- Tabela para simplificar as relações de sociedade de modo que pelo CNPJ fornecido seja possível rapidamente encontrar todos os CNPJs que estão a ele associados
+-- Tabela para simplificar as relações de sociedade de modo que pelo CNPJ fornecido seja possível rapidamente encontrar todos os CNPJs que estão a ele associados,
+--  do qualificação do sócio a partir do código
 drop table if exists resposta_socios;
 create table resposta_socios (
-	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (CADASTRO NACIONAL DA PESSOA JURÍDICA) a ser buscado
-	cnpj_basico VARCHAR(8) PRIMARY KEY,
-	-- Sócios é a lista de CNPJs/CPFs relacionados ao CNPJ fornecido em texto e separados por vírgula
-	socios VARCHAR
+		-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (CADASTRO NACIONAL DA PESSOA JURÍDICA) a ser buscado
+		cnpj_basico VARCHAR(8) PRIMARY KEY,
+		-- CÓDIGO DO IDENTIFICADOR DE SÓCIO
+			-- 1 - PESSOA JURÍDICA
+			-- 2 - PESSOA FÍSICA
+			-- 3 - ESTRANGEIRO
+		identificador_socio VARCHAR(3),
+		-- NOME DO SÓCIO PESSOA FÍSICA OU A RAZÃO SOCIAL E/OU NOME EMPRESARIAL DA PESSOA JURÍDICA
+		-- E/OU NOME DO SÓCIO /RAZÃO SOCIAL DO SÓCIO ESTRANGEIRO
+		razao_social VARCHAR,
+		-- CPF OU CNPJ DO SÓCIO (SÓCIO ESTRANGEIRO NÃO TEM ESTA INFORMAÇÃO).
+		cnpj_cpf_socio VARCHAR(15),
+		-- CÓDIGO - DESCRIÇÃO DA QUALIFICAÇÃO DO SÓCIO
+		qualificacao_socio VARCHAR(100),
+		-- DATA DE ENTRADA NA SOCIEDADE
+		data_entrada_sociedade VARCHAR(10),
+		-- CÓDIGO - DESCRIÇÃO do PAÍS DO SÓCIO ESTRANGEIRO
+		pais_socio_estrangeiro VARCHAR,
+		-- NÚMERO DO CPF DO REPRESENTANTE LEGAL
+		numero_cpf_representante_legal VARCHAR(18),
+		-- NOME DO REPRESENTANTE LEGAL
+		nome_representante_legal VARCHAR,
+		-- CÓDIGO DA QUALIFICAÇÃO DO REPRESENTANTE LEGAL
+		codigo_qualificacao_representante_legal VARCHAR(3),
+		-- CÓDIGO CORRESPONDENTE À FAIXA ETÁRIA DO SÓCIO
+			-- 0 para não se aplica.
+			-- 1 para os intervalos entre 0 a 12 anos
+			-- 2 para os intervalos entre 13 a 20 anos
+			-- 3 para os intervalos entre 21 a 30 anos
+			-- 4 para os intervalos entre 31 a 40 anos
+			-- 5 para os intervalos entre 41 a 50 anos
+			-- 6 para os intervalos entre 51 a 60 anos
+			-- 7 para os intervalos entre 61 a 70 anos
+			-- 8 para os intervalos entre 71 a 80 anos
+			-- 9 para maiores de 80 anos.
+		faixa_etaria VARCHAR(10);
 );
 
 -- Primary keys:
@@ -351,7 +384,7 @@ ALTER TABLE socio ADD CONSTRAINT pk_socio_id PRIMARY KEY (cnpj_basico);
 -- ALTER TABLE cnae_cnpj ADD CONSTRAINT fk_cnae_cnpj_cnpj FOREIGN KEY (cnpj) REFERENCES empresa (cnpj);
 
 -- Índices:
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_empresa_cnpj ON empresa (cnpj);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_empresa_cnpj ON empresa (cnpj);s
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cnae_codigo ON cnae (codigo);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cnae_descricao ON cnae (descricao);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnpj ON estabelecimento (cnpj_basico);
@@ -362,3 +395,4 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_local ON estabelecim
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_situacao_cadastral ON estabelecimento (situacao_cadastral);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_simples_mei_simples ON simples (opcao_pelo_mei, opcao_pelo_simples);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_resposta_cnpj ON resposta_cnpj (estabelecimento_cnpj_basico);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_resposta_socios ON resposta_socios (cnpj_basico);
