@@ -275,7 +275,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
     sql = sql + ' socio.data_entrada_sociedade as socio_data_entrada_sociedade,'
     sql = sql + ' socio.codigo_pais_socio_estrangeiro as socio_codigo_pais_socio_estrangeiro,'
     sql = sql + ' socio.numero_cpf_representante_legal as socio_numero_cpf_representante_legal,'
-    sql = sql + ' socio.nome_representante_legal as socio.nome_representante_legal,'
+    sql = sql + ' socio.nome_representante_legal as socio_nome_representante_legal,'
     sql = sql + ' socio.codigo_qualificacao_representante_legal as socio_codigo_qualificacao_representante_legal,'
     sql = sql + ' socio.faixa_etaria as socio_faixa_etaria'
     sql = sql + ' FROM socio'
@@ -383,13 +383,14 @@ if __name__ == "__main__":
     if conn is not None:
         cursor = conn.cursor()
         offset = 0
+        block_size = 10_000
         lista_cnpj = []
         while lista_cnpj is not None:
             # Pega uma lista de cnpjs da fatia
             lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
             for cnpj in lista_cnpj:
                 resposta_cnpj = process_resposta_socios(cnpj['empresa_cnpj'], cursor)
-            offset = offset + 10_000
+            offset = offset + block_size
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
