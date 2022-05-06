@@ -347,9 +347,9 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
             batch_insert_resposta_socios(cursor, lista_resposta_socios)
     pass
 
-def conecta():
+def conecta(password):
     try:
-        conn = psycopg2.connect(database='qd_receita', user='postgres', password='change_here', host='localhost', port='5432', cursor_factory=RealDictCursor)
+        conn = psycopg2.connect(database='qd_receita', user='postgres', password=password, host='localhost', port='5432', cursor_factory=RealDictCursor)
         conn.autocommit = True
         return conn
     except Exception as e:
@@ -379,14 +379,17 @@ def processa_cnpj_socios(offset, block_size):
 
 if __name__ == "__main__":
     # Estabelece conexão com o BD
-    conn = conecta()
+    conn = conecta('enter_password_here')
     if conn is not None:
         cursor = conn.cursor()
-        # Pega uma lista de cnpjs da fatia
-        lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
-        for cnpj in lista_cnpj:
-            resposta_cnpj = process_resposta_socios(cnpj['empresa_cnpj'], cursor)
-
+        offset = 0
+        lista_cnpj = []
+        while lista_cnpj is not None:
+            # Pega uma lista de cnpjs da fatia
+            lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
+            for cnpj in lista_cnpj:
+                resposta_cnpj = process_resposta_socios(cnpj['empresa_cnpj'], cursor)
+            offset = offset + 10_000
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
