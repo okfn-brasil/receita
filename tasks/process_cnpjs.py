@@ -14,9 +14,13 @@ def get_n_total_cnpj(cursor=None):
 # Retorna um objeto com a resposta do banco
 def get_all_cnpj_ids(cursor=None, offset=0, limit=10000):
     print(f'Offset: {offset} | Limit: {limit}')
+    # Quando não tem limite, deve retornar tudo, portanto na consulta sem limites, deve ser omitido o parâmetro
+    if limit == 0:
+        sql = f'SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj offset {offset}'
     # Executa uma consulta para pegar todos os identificadores únicos de CNPJ que serão utilizados nas buscas:
-    sql = f'SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj limit {limit} offset {offset}'
-    if cursor is not None:
+    else:
+        sql = f'SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj limit {limit} offset {offset}'
+    if cursor is not None and sql is not None:
         cursor.execute(sql)
         results = cursor.fetchall()
         if results is not None:
@@ -382,7 +386,7 @@ if __name__ == "__main__":
         lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
         for cnpj in lista_cnpj:
             resposta_cnpj = process_resposta_socios(cnpj['empresa_cnpj'], cursor)
-            
+
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
