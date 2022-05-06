@@ -364,7 +364,7 @@ create table resposta_socios (
 			-- 7 para os intervalos entre 61 a 70 anos
 			-- 8 para os intervalos entre 71 a 80 anos
 			-- 9 para maiores de 80 anos.
-		faixa_etaria VARCHAR(10);
+		faixa_etaria VARCHAR(10)
 );
 
 -- Primary keys:
@@ -384,7 +384,7 @@ ALTER TABLE socio ADD CONSTRAINT pk_socio_id PRIMARY KEY (cnpj_basico);
 -- ALTER TABLE cnae_cnpj ADD CONSTRAINT fk_cnae_cnpj_cnpj FOREIGN KEY (cnpj) REFERENCES empresa (cnpj);
 
 -- Índices:
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_empresa_cnpj ON empresa (cnpj);s
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_empresa_cnpj ON empresa (cnpj);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cnae_codigo ON cnae (codigo);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cnae_descricao ON cnae (descricao);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnpj ON estabelecimento (cnpj_basico);

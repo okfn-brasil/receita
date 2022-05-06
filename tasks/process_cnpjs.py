@@ -351,35 +351,38 @@ def conecta():
     except Exception as e:
         print(e)
 
+def processa_cnpj_socios(offset, block_size):
+    # Total de CNPJs a processar:
+    n_total_cnpjs = get_n_total_cnpj(cursor)
+    n_total_cnpjs = int(n_total_cnpjs)
+    print(f'Total de CNPJs a processar: {n_total_cnpjs}')
+    # lista de objetos a serem salvos em uma FANTASIA
+    while ( offset < n_total_cnpjs):
+        lista_resposta_cnpj = []
+        # Pega uma lista de cnpjs da fatia
+        lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
+        print(f'Processando {len(lista_cnpj)} registros')
+        for cnpj in lista_cnpj:
+            resposta_cnpj = process_resposta_cnpjs(cnpj['empresa_cnpj'], cursor)
+            if resposta_cnpj is not None:
+                lista_resposta_cnpj.append(list(resposta_cnpj.values()))
+            # O processamento da resposta_socios para o CNPJ chama internamente o método de inserção em batch para inserir de uma vez todos os sócios relacionados ao CNPJ
+            process_resposta_socios(cnpj['empresa_cnpj'], cursor)
+        # Insere os registros do bloco no BANCO
+        batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
+        # Incrementa o bloco
+        offset = offset + block_size
+
 if __name__ == "__main__":
     # Estabelece conexão com o BD
     conn = conecta()
     if conn is not None:
         cursor = conn.cursor()
-        # Total de CNPJs a processar:
-        n_total_cnpjs = get_n_total_cnpj(cursor)
-        n_total_cnpjs = int(n_total_cnpjs)
-        print(f'Total de CNPJs a processar: {n_total_cnpjs}')
-        # Lista de todos os cnpjs a serem processados:
-        # contador de blocos de CNPJs
-        offset = 0
-        block_size = 10000
-        # lista de objetos a serem salvos em uma FANTASIA
-        while ( offset < n_total_cnpjs):
-            lista_resposta_cnpj = []
-            # Pega uma lista de cnpjs da fatia
-            lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
-            print(f'Processando {len(lista_cnpj)} registros')
-            for cnpj in lista_cnpj:
-                resposta_cnpj = process_resposta_cnpjs(cnpj['empresa_cnpj'], cursor)
-                if resposta_cnpj is not None:
-                    lista_resposta_cnpj.append(list(resposta_cnpj.values()))
-                # O processamento da resposta_socios para o CNPJ chama internamente o método de inserção em batch para inserir de uma vez todos os sócios relacionados ao CNPJ
-                process_resposta_socios(cnpj['empresa_cnpj'], cursor)
-            # Insere os registros do bloco no BANCO
-            batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
-            # Incrementa o bloco
-            offset = offset + block_size
+        # Pega uma lista de cnpjs da fatia
+        lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
+        for cnpj in lista_cnpj:
+            resposta_cnpj = process_resposta_socios(cnpj['empresa_cnpj'], cursor)
+            
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
