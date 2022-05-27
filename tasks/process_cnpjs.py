@@ -456,7 +456,8 @@ if __name__ == "__main__":
                     # Adiciona o dicionário À lista de objetos a serem inseridos em batch
                     print(f'Resposta: {resposta_cnpj}')
                     lista_resposta_cnpj.append(list(resposta_cnpj.values()))
-
+                # Salva os registros da fatia em batch no banco
+                batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
             else:
                 lista_cnpj = None
             offset = offset + block_size
