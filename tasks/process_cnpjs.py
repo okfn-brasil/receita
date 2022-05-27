@@ -43,7 +43,6 @@ def batch_insert_resposta_socios(cursor, lista_resposta_socios):
     if cursor is not None and lista_resposta_socios is not None:
         try:
             extras.execute_batch(cursor, sql_insert, lista_resposta_socios)
-            print(f'Batch insert executado salvou {len(lista_resposta_socios)}')
         except Exception as e:
             print('Erro de inserção batch: ' + str(e))
 
@@ -301,11 +300,11 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                 # TODO run other select to try to fetch data
                 socio_codigo_qualificacao_socio = campos_socios['socio_codigo_qualificacao_socio']
                 if socio_codigo_qualificacao_socio is not None:
-                    sql_qualificacao_socio = f'SELECT from qualificacao_socio where codigo = \'{socio_codigo_qualificacao_socio}\''
-                    cursor.execute(sql)
-                    results = cursor.fetchall()
-                    if results is not None and results != []:
-                        r = results[0]
+                    sql_qualificacao_socio = f'SELECT * from qualificacao_socio where codigo = \'{socio_codigo_qualificacao_socio}\''
+                    cursor.execute(sql_qualificacao_socio)
+                    results_qs = cursor.fetchall()
+                    if results_qs is not None and results_qs != []:
+                        r = results_qs[0]
                         if r is not None:
                             socio_codigo_qualificacao_socio = socio_codigo_qualificacao_socio + ' - ' + r['descricao']
                             resposta_socios['socio_codigo_qualificacao_socio'] = socio_codigo_qualificacao_socio
@@ -332,15 +331,15 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                             pais_cod_desc = f'{pais_codigo} - {pais_descricao}'
                         else:
                             pais_cod_desc = pais_cod
-                        resposta_socios['pais_socio_estrangeiro'] = f'\'{pais_cod_desc}\''
+                        resposta_socios['pais_socio_estrangeiro'] = f'{pais_cod_desc}'
                     else:
                         print(f'Erro! País {pais_codigo} não encontrado')
-                        resposta_socios['pais_socio_estrangeiro'] = '\'' + pais_codigo + '\''
+                        resposta_socios['pais_socio_estrangeiro'] = pais_codigo
                 else:
-                    resposta_socios['pais_socio_estrangeiro'] = '\'' + str(campos_socios['socio_codigo_pais_socio_estrangeiro']) + '\''
+                    resposta_socios['pais_socio_estrangeiro'] = str(campos_socios['socio_codigo_pais_socio_estrangeiro'])
 
                 resposta_socios['socio_numero_cpf_representante_legal'] = campos_socios['socio_numero_cpf_representante_legal']
-                resposta_socios['nome_representante_legal'] = campos_socios['nome_representante_legal']
+                resposta_socios['socio_nome_representante_legal'] = campos_socios['socio_nome_representante_legal']
                 resposta_socios['socio_codigo_qualificacao_representante_legal'] = campos_socios['socio_codigo_qualificacao_representante_legal']
                 resposta_socios['socio_faixa_etaria'] = campos_socios['socio_faixa_etaria']
                 lista_resposta_socios.append(list(resposta_socios.values()))
@@ -359,13 +358,11 @@ def processa_cnpj_socios(offset, block_size):
     # Total de CNPJs a processar:
     n_total_cnpjs = get_n_total_cnpj(cursor)
     n_total_cnpjs = int(n_total_cnpjs)
-    print(f'Total de CNPJs a processar: {n_total_cnpjs}')
     # lista de objetos a serem salvos em uma FANTASIA
     while ( offset < n_total_cnpjs):
         lista_resposta_cnpj = []
         # Pega uma lista de cnpjs da fatia
         lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
-        print(f'Processando {len(lista_cnpj)} registros')
         for cnpj in lista_cnpj:
             resposta_cnpj = process_resposta_cnpjs(cnpj['empresa_cnpj'], cursor)
             if resposta_cnpj is not None:
@@ -379,7 +376,7 @@ def processa_cnpj_socios(offset, block_size):
 
 if __name__ == "__main__":
     # Estabelece conexão com o BD
-    conn = conecta('enter_password_here')
+    conn = conecta('change here')
     if conn is not None:
         cursor = conn.cursor()
         offset = 0
@@ -388,8 +385,11 @@ if __name__ == "__main__":
         while lista_cnpj is not None:
             # Pega uma lista de cnpjs da fatia
             lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
-            for cnpj in lista_cnpj:
-                resposta_cnpj = process_resposta_socios(cnpj['empresa_cnpj'], cursor)
+            if len(lista_cnpj) > 0:
+                for cnpj in lista_cnpj:
+                    resposta_cnpj = process_resposta_socios(cnpj['empresa_cnpj'], cursor)
+            else:
+                lista_cnpj = None
             offset = offset + block_size
         # Encerra a conexão com o BD
         conn.commit()
