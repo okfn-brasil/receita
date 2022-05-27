@@ -168,7 +168,10 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             campos_cnpj = r.copy()
             # Sanitização e montagem dos campos compostos salvando num objeto único resposta_cnpj a ser submetido
             resposta_cnpj['estabelecimento_cnpj_basico'] = campos_cnpj['estabelecimento_cnpj_basico']
-            resposta_cnpj['estabelecimento_cnpj_ordem'] = campos_cnpj['estabelecimento_cnpj_ordem']
+            # Corrige a remoção dos zeros à esquerda, sempre deve ter 4 dígitos.
+            estabelecimento_cnpj_ordem = campos_cnpj['estabelecimento_cnpj_ordem']
+            while len(estabelecimento_cnpj_ordem) < 4
+                estabelecimento_cnpj_ordem = '0' + estabelecimento_cnpj_ordem
             resposta_cnpj['estabelecimento_cnpj_dv'] = campos_cnpj['estabelecimento_cnpj_dv']
             resposta_cnpj['estabelecimento_identificador_matriz_filial'] = campos_cnpj['estabelecimento_identificador_matriz_filial']
             resposta_cnpj['estabelecimento_nome_fantasia'] = str(campos_cnpj['estabelecimento_nome_fantasia']).replace('\'', '`')
@@ -183,7 +186,10 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             resposta_cnpj['estabelecimento_numero'] = str(campos_cnpj['estabelecimento_numero']).replace('\'', '')
             resposta_cnpj['estabelecimento_complemento'] = str(campos_cnpj['estabelecimento_complemento']).replace('\'', '`')
             resposta_cnpj['estabelecimento_bairro'] = str(campos_cnpj['estabelecimento_bairro']).replace('\'', '`')
-            resposta_cnpj['estabelecimento_cep'] = campos_cnpj['estabelecimento_cep']
+            # Corrigindo a formatação do CEP
+            cep = campos_cnpj['estabelecimento_cep']
+            cep_corrigido = cep[0:5]  + '-' + cep[6:9]
+            resposta_cnpj['estabelecimento_cep'] = cep_corrigido
             resposta_cnpj['estabelecimento_uf'] = campos_cnpj['estabelecimento_uf']
             # Tratando campos de telefone
             estabelecimento_ddd_telefone_1 = str(campos_cnpj['estabelecimento_ddd_1'])[:-2] + str(campos_cnpj['estabelecimento_telefone_1'])
