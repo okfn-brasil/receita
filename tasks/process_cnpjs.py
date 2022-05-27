@@ -68,7 +68,8 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
         if results is not None and results != []:
             r = results[0]
             campos_cnpj = r.copy()
-
+            # Para as empresas que não contém estabelecimento, importante configurar o campo estabelecimento_cnpj_basico
+            resposta_cnpj['estabelecimento_cnpj_basico'] = cnpj_basico
             resposta_cnpj['empresa_razao_social'] = str(campos_cnpj['empresa_razao_social']).replace('\'', '`')
             empresa_codigo_natureza_juridica = campos_cnpj['empresa_codigo_natureza_juridica']
             # Realizar consulta complementar para a natureza jurídica da empresa:
