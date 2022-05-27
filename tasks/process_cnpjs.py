@@ -28,7 +28,7 @@ def get_all_cnpj_ids(cursor=None, offset=0, limit=10000):
 
 def batch_insert_resposta_cnpj(cursor, resposta_cnpj_lista_valores):
     # Consulta adaptada para inserção via execute_batch
-    sql_insert = 'INSERT into resposta_cnpj (estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv, estabelecimento_identificador_matriz_filial, estabelecimento_nome_fantasia, estabelecimento_situacao_cadastral, estabelecimento_data_situacao_cadastral, estabelecimento_motivo_situacao_cadastral, estabelecimento_nome_cidade_exterior, estabelecimento_data_inicio_atividade, estabelecimento_cnae_fiscal_secundario, estabelecimento_tipo_logradouro, estabelecimento_logradouro, estabelecimento_numero, estabelecimento_complemento, estabelecimento_bairro, estabelecimento_cep, estabelecimento_uf, estabelecimento_ddd_telefone_1, estabelecimento_ddd_telefone_2, estabelecimento_ddd_telefone_fax, estabelecimento_correio_eletronico, estabelecimento_situacao_especial, estabelecimento_data_situacao_especial, empresa_razao_social, empresa_codigo_natureza_juridica, empresa_qualificacao_do_responsavel, empresa_capital_social, empresa_porte, empresa_ente_federativo_responsavel, simples_opcao_pelo_simples, simples_data_opcao_pelo_simples, simples_data_exclusao_pelo_simples, simples_opcao_pelo_mei, simples_data_opcao_pelo_mei, simples_data_exclusao_pelo_mei, cnae, pais, municipio)'
+    sql_insert = 'INSERT into resposta_cnpj (empresa_razao_social, empresa_codigo_natureza_juridica, empresa_qualificacao_do_responsavel, empresa_capital_social, empresa_porte, empresa_ente_federativo_responsavel, simples_opcao_pelo_simples, simples_data_opcao_pelo_simples, simples_data_exclusao_pelo_simples, simples_opcao_pelo_mei, simples_data_opcao_pelo_mei, simples_data_exclusao_pelo_mei, estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv, estabelecimento_identificador_matriz_filial, estabelecimento_nome_fantasia, estabelecimento_situacao_cadastral, estabelecimento_data_situacao_cadastral, estabelecimento_motivo_situacao_cadastral, estabelecimento_nome_cidade_exterior, estabelecimento_data_inicio_atividade, estabelecimento_cnae_fiscal_secundario, estabelecimento_tipo_logradouro, estabelecimento_logradouro, estabelecimento_numero, estabelecimento_complemento, estabelecimento_bairro, estabelecimento_cep, estabelecimento_uf, estabelecimento_ddd_telefone_1, estabelecimento_ddd_telefone_2, estabelecimento_ddd_telefone_fax, estabelecimento_correio_eletronico, estabelecimento_situacao_especial, estabelecimento_data_situacao_especial, cnae, pais, municipio)'
     sql_insert = sql_insert + ' VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)'
     if cursor is not None and resposta_cnpj_lista_valores is not None:
         try:
@@ -46,8 +46,8 @@ def batch_insert_resposta_socios(cursor, lista_resposta_socios):
         except Exception as e:
             print('Erro de inserção batch: ' + str(e))
 
-# Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento
-def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
+# Processar a partir de um CNPJ as tabelas relacionadas à empresa e possíveis dados do simples
+def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
     # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
     sql = 'SELECT empresa.cnpj as empresa_cnpj,'
     sql = sql + ' empresa.razao_social as empresa_razao_social,'
@@ -56,7 +56,75 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' empresa.capital_social  as empresa_capital_social,'
     sql = sql + ' empresa.porte as empresa_porte,'
     sql = sql + ' empresa.ente_federativo_responsavel as empresa_ente_federativo_responsavel,'
-    sql = sql + ' estabelecimento.cnpj_basico as estabelecimento_cnpj_basico,'
+    sql = sql + ' FROM empresa'
+    sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
+
+    if cursor is not None:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        # Armazena os campos a serem salvos na tabela de resposta_cnpj
+        resposta_cnpj = {}
+        campos_cnpj = {}
+        if results is not None and results != []:
+            r = results[0]
+            campos_cnpj = r.copy()
+
+            resposta_cnpj['empresa_razao_social'] = str(campos_cnpj['empresa_razao_social']).replace('\'', '`')
+            empresa_codigo_natureza_juridica = campos_cnpj['empresa_codigo_natureza_juridica']
+            # Realizar consulta complementar para a natureza jurídica da empresa:
+            sql_natureza_juridica = f'SELECT * from natureza_juridica where codigo = {empresa_codigo_natureza_juridica}'
+            cursor.execute(sql_natureza_juridica)
+            results = cursor.fetchall()
+            if results is not None and results != []:
+                campos_natureza_juridica = results[0]
+                if campos_natureza_juridica is None:
+                    resposta_cnpj['empresa_codigo_natureza_juridica'] = ''
+                else:
+                    resposta_cnpj['empresa_codigo_natureza_juridica'] = str(empresa_codigo_natureza_juridica) + ' - ' + campos_natureza_juridica['descricao']
+            resposta_cnpj['empresa_qualificacao_do_responsavel'] = campos_cnpj['empresa_qualificacao_do_responsavel']
+            resposta_cnpj['empresa_capital_social'] = campos_cnpj['empresa_capital_social']
+            resposta_cnpj['empresa_porte'] = campos_cnpj['empresa_porte']
+            resposta_cnpj['empresa_ente_federativo_responsavel'] = str(campos_cnpj['empresa_ente_federativo_responsavel']).replace('\'', '')
+
+            # Realizar consulta complementar simples:
+            empresa_cnpj = str(campos_cnpj['empresa_cnpj'])
+            sql_simples = f'SELECT * from simples where cnpj_basico = \'{empresa_cnpj}\''
+            cursor.execute(sql_simples)
+            results = cursor.fetchall()
+            if results is not None and results != []:
+                campos_simples = results[0]
+                if campos_simples is None:
+                    resposta_cnpj['simples_opcao_pelo_simples'] = ''
+                    resposta_cnpj['simples_data_opcao_pelo_simples'] = ''
+                    resposta_cnpj['simples_data_exclusao_pelo_simples'] = ''
+                    resposta_cnpj['simples_opcao_pelo_mei'] = ''
+                    resposta_cnpj['simples_data_opcao_pelo_mei'] = ''
+                    resposta_cnpj['simples_data_exclusao_pelo_mei'] = ''
+                else:
+                    resposta_cnpj['simples_opcao_pelo_simples'] = campos_simples['opcao_pelo_simples']
+                    resposta_cnpj['simples_data_opcao_pelo_simples'] = campos_simples['data_opcao_pelo_simples']
+                    resposta_cnpj['simples_data_exclusao_pelo_simples'] = campos_simples['data_exclusao_pelo_simples']
+                    resposta_cnpj['simples_opcao_pelo_mei'] = campos_simples['opcao_pelo_mei']
+                    resposta_cnpj['simples_data_opcao_pelo_mei'] = campos_simples['data_opcao_pelo_mei']
+                    resposta_cnpj['simples_data_exclusao_pelo_mei'] = campos_simples['data_exclusao_pelo_mei']
+            else:
+                resposta_cnpj['simples_opcao_pelo_simples'] = ''
+                resposta_cnpj['simples_data_opcao_pelo_simples'] = ''
+                resposta_cnpj['simples_data_exclusao_pelo_simples'] = ''
+                resposta_cnpj['simples_opcao_pelo_mei'] = ''
+                resposta_cnpj['simples_data_opcao_pelo_mei'] = ''
+                resposta_cnpj['simples_data_exclusao_pelo_mei'] = ''
+        return resposta_cnpj
+    else:
+        print("Cursor is None")
+        return None
+    pass
+
+# Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento
+def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
+
+    # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
+    sql = 'SELECT estabelecimento.cnpj_basico as estabelecimento_cnpj_basico,'
     sql = sql + ' estabelecimento.cnpj_ordem as estabelecimento_cnpj_ordem,'
     sql = sql + ' estabelecimento.cnpj_dv as estabelecimento_cnpj_dv,'
     sql = sql + ' estabelecimento.identificador_matriz_filial as estabelecimento_identificador_matriz_filial,'
@@ -86,9 +154,8 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
     sql = sql + ' estabelecimento.correio_eletronico as estabelecimento_correio_eletronico,'
     sql = sql + ' estabelecimento.situacao_especial as estabelecimento_situacao_especial,'
     sql = sql + ' estabelecimento.data_situacao_especial as estabelecimento_data_situacao_especial'
-    sql = sql + ' FROM empresa'
-    sql = sql + ' INNER JOIN estabelecimento ON empresa.cnpj = estabelecimento.cnpj_basico '
-    sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
+    sql = sql + ' FROM estabelecimento'
+    sql = sql + f' WHERE estabelecimento.cnpj_basico =  \'{cnpj_basico}\';'
 
     if cursor is not None:
         cursor.execute(sql)
@@ -139,50 +206,6 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
             resposta_cnpj['estabelecimento_correio_eletronico'] = estabelecimento_correio_eletronico
             resposta_cnpj['estabelecimento_situacao_especial'] = campos_cnpj['estabelecimento_situacao_especial']
             resposta_cnpj['estabelecimento_data_situacao_especial'] = campos_cnpj['estabelecimento_data_situacao_especial']
-            resposta_cnpj['empresa_razao_social'] = str(campos_cnpj['empresa_razao_social']).replace('\'', '`')
-            empresa_codigo_natureza_juridica = campos_cnpj['empresa_codigo_natureza_juridica']
-            # Realizar consulta complementar para a natureza jurídica da empresa:
-            sql_natureza_juridica = f'SELECT * from natureza_juridica where codigo = {empresa_codigo_natureza_juridica}'
-            cursor.execute(sql_natureza_juridica)
-            results = cursor.fetchall()
-            if results is not None and results != []:
-                campos_natureza_juridica = results[0]
-                if campos_natureza_juridica is None:
-                    resposta_cnpj['empresa_codigo_natureza_juridica'] = ''
-                else:
-                    resposta_cnpj['empresa_codigo_natureza_juridica'] = str(empresa_codigo_natureza_juridica) + ' - ' + campos_natureza_juridica['descricao']
-            resposta_cnpj['empresa_qualificacao_do_responsavel'] = campos_cnpj['empresa_qualificacao_do_responsavel']
-            resposta_cnpj['empresa_capital_social'] = campos_cnpj['empresa_capital_social']
-            resposta_cnpj['empresa_porte'] = campos_cnpj['empresa_porte']
-            resposta_cnpj['empresa_ente_federativo_responsavel'] = str(campos_cnpj['empresa_ente_federativo_responsavel']).replace('\'', '')
-            # Realizar consulta complementar simples:
-            empresa_cnpj = str(campos_cnpj['empresa_cnpj'])
-            sql_simples = f'SELECT * from simples where cnpj_basico = \'{empresa_cnpj}\''
-            cursor.execute(sql_simples)
-            results = cursor.fetchall()
-            if results is not None and results != []:
-                campos_simples = results[0]
-                if campos_simples is None:
-                    resposta_cnpj['simples_opcao_pelo_simples'] = ''
-                    resposta_cnpj['simples_data_opcao_pelo_simples'] = ''
-                    resposta_cnpj['simples_data_exclusao_pelo_simples'] = ''
-                    resposta_cnpj['simples_opcao_pelo_mei'] = ''
-                    resposta_cnpj['simples_data_opcao_pelo_mei'] = ''
-                    resposta_cnpj['simples_data_exclusao_pelo_mei'] = ''
-                else:
-                    resposta_cnpj['simples_opcao_pelo_simples'] = campos_simples['opcao_pelo_simples']
-                    resposta_cnpj['simples_data_opcao_pelo_simples'] = campos_simples['data_opcao_pelo_simples']
-                    resposta_cnpj['simples_data_exclusao_pelo_simples'] = campos_simples['data_exclusao_pelo_simples']
-                    resposta_cnpj['simples_opcao_pelo_mei'] = campos_simples['opcao_pelo_mei']
-                    resposta_cnpj['simples_data_opcao_pelo_mei'] = campos_simples['data_opcao_pelo_mei']
-                    resposta_cnpj['simples_data_exclusao_pelo_mei'] = campos_simples['data_exclusao_pelo_mei']
-            else:
-                resposta_cnpj['simples_opcao_pelo_simples'] = ''
-                resposta_cnpj['simples_data_opcao_pelo_simples'] = ''
-                resposta_cnpj['simples_data_exclusao_pelo_simples'] = ''
-                resposta_cnpj['simples_opcao_pelo_mei'] = ''
-                resposta_cnpj['simples_data_opcao_pelo_mei'] = ''
-                resposta_cnpj['simples_data_exclusao_pelo_mei'] = ''
 
             # Realizar a consulta complementar para o cnae
             cnae_codigo = str(campos_cnpj['estabelecimento_cnae_fiscal'])
@@ -262,6 +285,38 @@ def process_resposta_cnpjs(cnpj_basico: str, cursor=None):
         return None
     pass
 
+# Método auxiliar utilizado para completar com dados em branco os campos relacionados ao dicionários da tabela estabelecimento
+def set_estabelecimento_blank(resposta_cnpj)
+    if resposta_cnpj is None:
+        resposta_cnpj = {}
+    resposta_cnpj['estabelecimento_cnpj_basico'] = ''
+    resposta_cnpj['estabelecimento_cnpj_ordem'] = ''
+    resposta_cnpj['estabelecimento_cnpj_dv'] = ''
+    resposta_cnpj['estabelecimento_identificador_matriz_filial'] = ''
+    resposta_cnpj['estabelecimento_nome_fantasia'] = ''
+    resposta_cnpj['estabelecimento_situacao_cadastral'] = ''
+    resposta_cnpj['estabelecimento_data_situacao_cadastral'] = ''
+    resposta_cnpj['estabelecimento_motivo_situacao_cadastral'] = ''
+    resposta_cnpj['estabelecimento_nome_cidade_exterior'] = ''
+    resposta_cnpj['estabelecimento_data_inicio_atividade'] = ''
+    resposta_cnpj['estabelecimento_cnae_fiscal_secundario'] = ''
+    resposta_cnpj['estabelecimento_tipo_logradouro'] = ''
+    resposta_cnpj['estabelecimento_logradouro'] = ''
+    resposta_cnpj['estabelecimento_numero'] = ''
+    resposta_cnpj['estabelecimento_complemento'] = ''
+    resposta_cnpj['estabelecimento_bairro'] = ''
+    resposta_cnpj['estabelecimento_cep'] = ''
+    resposta_cnpj['estabelecimento_uf'] = ''
+    resposta_cnpj['estabelecimento_ddd_telefone_1'] = ''
+    resposta_cnpj['estabelecimento_ddd_telefone_2'] = ''
+    resposta_cnpj['estabelecimento_ddd_telefone_fax'] = ''
+    resposta_cnpj['estabelecimento_correio_eletronico'] = ''
+    resposta_cnpj['estabelecimento_situacao_especial'] = ''
+    resposta_cnpj['estabelecimento_data_situacao_especial'] = ''
+    resposta_cnpj['cnae'] = ''
+    resposta_cnpj['pais'] = ''
+    resposta_cnpj['municipio'] = ''
+    return resposta_cnpj
 
 # Processar a partir de um CNPJ as tabelas relacionadas aos sócios da empresa
 def process_resposta_socios(cnpj_basico: str, cursor=None):
@@ -354,11 +409,11 @@ def conecta(password):
     except Exception as e:
         print(e)
 
+# Método utilizado apenas para carregar a lista de sócios, sem recarregar dados de empresa e estabelecimento
 def processa_cnpj_socios(offset, block_size):
     # Total de CNPJs a processar:
     n_total_cnpjs = get_n_total_cnpj(cursor)
     n_total_cnpjs = int(n_total_cnpjs)
-    # lista de objetos a serem salvos em uma FANTASIA
     while ( offset < n_total_cnpjs):
         lista_resposta_cnpj = []
         # Pega uma lista de cnpjs da fatia
@@ -369,8 +424,6 @@ def processa_cnpj_socios(offset, block_size):
                 lista_resposta_cnpj.append(list(resposta_cnpj.values()))
             # O processamento da resposta_socios para o CNPJ chama internamente o método de inserção em batch para inserir de uma vez todos os sócios relacionados ao CNPJ
             process_resposta_socios(cnpj['empresa_cnpj'], cursor)
-        # Insere os registros do bloco no BANCO
-        batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
         # Incrementa o bloco
         offset = offset + block_size
 
@@ -382,15 +435,32 @@ if __name__ == "__main__":
         offset = 0
         block_size = 10_000
         lista_cnpj = []
+        lista_resposta_cnpj = []
         while lista_cnpj is not None:
             # Pega uma lista de cnpjs da fatia
             lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
             if len(lista_cnpj) > 0:
                 for cnpj in lista_cnpj:
-                    resposta_cnpj = process_resposta_socios(cnpj['empresa_cnpj'], cursor)
+                    # Dicionário com os campos a serem salvos
+                    resposta_cnpj = None
+                    resposta_cnpjs_empresa = process_resposta_cnpjs_empresa(cnpj['empresa_cnpj'], cursor)
+                    resposta_cnpjs_estabelecimento = process_resposta_cnpjs_estabelecimento(cnpj['empresa_cnpj'], cursor)
+                    # Processa lista de sócios para o dado cnpj
+                    process_resposta_socios(cnpj['empresa_cnpj'], cursor)
+                    # Caso hajam dados de estabelecimento, unifica o documento
+                    if resposta_cnpjs_estabelecimento is not None:
+                        resposta_cnpj = resposta_cnpjs_empresa | resposta_cnpjs_estabelecimento
+                    # Caso contrário, apenas os dados de empresa serão utilizados, necessário passar dados de estabelecimento em branco no dicionário
+                    else:
+                        resposta_cnpj = set_estabelecimento_blank(resposta_cnpjs_empresa)
+                    # Adiciona o dicionário À lista de objetos a serem inseridos em batch
+                    print(f'Resposta: {resposta_cnpj}')
+                    lista_resposta_cnpj.append(list(resposta_cnpj.values()))
+
             else:
                 lista_cnpj = None
             offset = offset + block_size
+
         # Encerra a conexão com o BD
         conn.commit()
         conn.close()
