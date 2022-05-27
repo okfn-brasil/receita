@@ -55,7 +55,7 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
     sql = sql + ' empresa.qualificacao_do_responsavel as empresa_qualificacao_do_responsavel,'
     sql = sql + ' empresa.capital_social  as empresa_capital_social,'
     sql = sql + ' empresa.porte as empresa_porte,'
-    sql = sql + ' empresa.ente_federativo_responsavel as empresa_ente_federativo_responsavel,'
+    sql = sql + ' empresa.ente_federativo_responsavel as empresa_ente_federativo_responsavel'
     sql = sql + ' FROM empresa'
     sql = sql + f' WHERE empresa.cnpj =  \'{cnpj_basico}\';'
 
@@ -286,7 +286,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
     pass
 
 # Método auxiliar utilizado para completar com dados em branco os campos relacionados ao dicionários da tabela estabelecimento
-def set_estabelecimento_blank(resposta_cnpj)
+def set_estabelecimento_blank(resposta_cnpj):
     if resposta_cnpj is None:
         resposta_cnpj = {}
     resposta_cnpj['estabelecimento_cnpj_basico'] = ''
@@ -429,7 +429,7 @@ def processa_cnpj_socios(offset, block_size):
 
 if __name__ == "__main__":
     # Estabelece conexão com o BD
-    conn = conecta('change here')
+    conn = conecta('change_here')
     if conn is not None:
         cursor = conn.cursor()
         offset = 0
@@ -449,12 +449,11 @@ if __name__ == "__main__":
                     process_resposta_socios(cnpj['empresa_cnpj'], cursor)
                     # Caso hajam dados de estabelecimento, unifica o documento
                     if resposta_cnpjs_estabelecimento is not None:
-                        resposta_cnpj = resposta_cnpjs_empresa | resposta_cnpjs_estabelecimento
+                        resposta_cnpj = dict(resposta_cnpjs_empresa, **resposta_cnpjs_estabelecimento)
                     # Caso contrário, apenas os dados de empresa serão utilizados, necessário passar dados de estabelecimento em branco no dicionário
                     else:
                         resposta_cnpj = set_estabelecimento_blank(resposta_cnpjs_empresa)
                     # Adiciona o dicionário À lista de objetos a serem inseridos em batch
-                    print(f'Resposta: {resposta_cnpj}')
                     lista_resposta_cnpj.append(list(resposta_cnpj.values()))
                 # Salva os registros da fatia em batch no banco
                 batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
