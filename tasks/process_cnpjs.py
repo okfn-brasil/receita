@@ -167,16 +167,14 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             r = results[0]
             campos_cnpj = r.copy()
             # Sanitização e montagem dos campos compostos salvando num objeto único resposta_cnpj a ser submetido
-
-            # Corrige a remoção dos zeros à esquerda, sempre deve ter 8 dígitos.
-            estabelecimento_cnpj_basico = campos_cnpj['estabelecimento_cnpj_basico']
-            while len(estabelecimento_cnpj_basico) < 8
-                estabelecimento_cnpj_basico = '0' + estabelecimento_cnpj_basico
-            resposta_cnpj['estabelecimento_cnpj_basico'] = estabelecimento_cnpj_basico
+            # Mantém o valor da tabela emresa como referência
+            resposta_cnpj['estabelecimento_cnpj_basico'] = cnpj_basico
             # Corrige a remoção dos zeros à esquerda, sempre deve ter 4 dígitos.
             estabelecimento_cnpj_ordem = campos_cnpj['estabelecimento_cnpj_ordem']
-            while len(estabelecimento_cnpj_ordem) < 4
-                estabelecimento_cnpj_ordem = '0' + estabelecimento_cnpj_ordem
+            if estabelecimento_cnpj_ordem is not None:
+                while len(estabelecimento_cnpj_ordem) < 4
+                    estabelecimento_cnpj_ordem = '0' + estabelecimento_cnpj_ordem
+            resposta_cnpj['estabelecimento_cnpj_ordem'] = estabelecimento_cnpj_ordem
             resposta_cnpj['estabelecimento_cnpj_dv'] = campos_cnpj['estabelecimento_cnpj_dv']
             resposta_cnpj['estabelecimento_identificador_matriz_filial'] = campos_cnpj['estabelecimento_identificador_matriz_filial']
             resposta_cnpj['estabelecimento_nome_fantasia'] = str(campos_cnpj['estabelecimento_nome_fantasia']).replace('\'', '`')
