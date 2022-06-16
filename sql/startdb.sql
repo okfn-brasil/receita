@@ -11,9 +11,9 @@ create table empresa (
 	-- NOME EMPRESARIAL DA PESSOA JURÍDICA
 	razao_social VARCHAR,
 	-- CÓDIGO DA NATUREZA JURÍDICA
-	codigo_natureza_juridica SMALLINT,
+	codigo_natureza_juridica VARCHAR(3),
 	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
-	qualificacao_do_responsavel SMALLINT,
+	qualificacao_do_responsavel VARCHAR(3),
 	-- CAPITAL SOCIAL DA EMPRESA
 	capital_social VARCHAR,
 	-- CÓDIGO DO PORTE DA EMPRESA:
@@ -174,16 +174,29 @@ create table socio (
 drop table if exists pais;
 create table pais (
 	-- CÓDIGO DO PAÍS
-	codigo SMALLINT,
+	codigo VARCHAR(3),
 	-- NOME DO PAÍS
 	descricao VARCHAR
 );
+
+-- Valores ausentes nos CSVs
+insert into pais values ('150', 'Jersey, Ilha do Canal');
+insert into pais values ('359', 'Man, Ilha de');
+insert into pais values ('367', 'Inglaterra');
+insert into pais values ('396', 'Johnston, Ilhas');
+insert into pais values ('449', 'Macedônia, Ant. Rep.Iugoslava');
+insert into pais values ('452', 'Madeira, Ilha da');
+insert into pais values ('490', 'Midway, Ilhas');
+insert into pais values ('498', 'Montenegro');
+insert into pais values ('678', 'Saint Kitts e Nevis');
+insert into pais values ('737', 'Servia');
+insert into pais values ('873', 'Wake, Ilha');
 
 -- Gerenciar as operações relativas aos países
 drop table if exists municipio;
 create table municipio (
 	-- CÓDIGO DO MUNICÍPIO
-	codigo SMALLINT,
+	codigo VARCHAR(3),
 	-- NOME DO MUNICÍPIO
 	descricao VARCHAR
 );
@@ -192,7 +205,7 @@ create table municipio (
 drop table if exists qualificacao_socio;
 create table qualificacao_socio (
 	-- CÓDIGO DA QUALIFICAÇÃO DO SÓCIO
-	codigo SMALLINT,
+	codigo VARCHAR(3),
 	-- NOME DA QUALIFICAÇÃO DO SÓCIO
 	descricao VARCHAR
 );
@@ -201,7 +214,7 @@ create table qualificacao_socio (
 drop table if exists natureza_juridica;
 create table natureza_juridica (
 	-- CÓDIGO DA NATUREZA JURÍDICA
-	codigo SMALLINT,
+	codigo VARCHAR(3),
 	-- NOME DA NATUREZA JURÍDICA
 	descricao VARCHAR
 );
@@ -210,10 +223,81 @@ create table natureza_juridica (
 drop table if exists cnae;
 create table cnae (
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA
-	codigo SMALLINT,
+	codigo VARCHAR(3),
 	-- NOME DA ATIVIDADE ECONÔMICA
 	descricao VARCHAR
 );
+
+-- Gerenciar as tabelas complementares para dimensões de valores fixos que não vem dos CSV
+
+drop table if exists dim_porte_empresa;
+create table dim_porte_empresa (
+	-- CÓDIGO DA ATIVIDADE ECONÔMICA
+	codigo VARCHAR(2),
+	-- NOME DA ATIVIDADE ECONÔMICA
+	descricao VARCHAR
+);
+
+insert into dim_porte_empresa values ('00', 'NÃO INFORMADO');
+insert into dim_porte_empresa values ('01', 'MICRO EMPRESA');
+insert into dim_porte_empresa values ('03', 'EMPRESA DE PEQUENO PORTE');
+insert into dim_porte_empresa values ('05', 'DEMAIS');
+
+drop table if exists dim_matriz_filial;
+create table dim_matriz_filial (
+	-- CÓDIGO DA ATIVIDADE ECONÔMICA
+	codigo CHAR,
+	-- NOME DA ATIVIDADE ECONÔMICA
+	descricao VARCHAR
+);
+
+insert into dim_matriz_filial values ('1', 'MATRIZ');
+insert into dim_matriz_filial values ('2', 'FILIAL');
+
+drop table if exists dim_situacao_cadastral;
+create table dim_situacao_cadastral (
+	-- CÓDIGO DA ATIVIDADE ECONÔMICA
+	codigo CHAR,
+	-- NOME DA ATIVIDADE ECONÔMICA
+	descricao VARCHAR
+);
+
+insert into dim_situacao_cadastral values ('1', 'NULA');
+insert into dim_situacao_cadastral values ('2', 'ATIVA');
+insert into dim_situacao_cadastral values ('3', 'SUSPENSA');
+insert into dim_situacao_cadastral values ('4', 'INAPTA');
+insert into dim_situacao_cadastral values ('8', 'BAIXADA');
+
+drop table if exists dim_identificador_socio;
+create table dim_identificador_socio (
+	-- CÓDIGO DA ATIVIDADE ECONÔMICA
+	codigo CHAR,
+	-- NOME DA ATIVIDADE ECONÔMICA
+	descricao VARCHAR
+);
+
+insert into dim_identificador_socio values ('1', 'PESSOA JURÍDICA');
+insert into dim_identificador_socio values ('2', 'PESSOA FÍSICA');
+insert into dim_identificador_socio values ('3', 'ESTRANGEIRO');
+
+drop table if exists dim_faixa_etaria;
+create table dim_faixa_etaria (
+	-- CÓDIGO DA ATIVIDADE ECONÔMICA
+	codigo CHAR,
+	-- NOME DA ATIVIDADE ECONÔMICA
+	descricao VARCHAR
+);
+
+insert into dim_faixa_etaria values ('1', '0 a 12 anos');
+insert into dim_faixa_etaria values ('2', '13 a 20 anos');
+insert into dim_faixa_etaria values ('3', '21 a 30 anos');
+insert into dim_faixa_etaria values ('4', '31 a 40 anos');
+insert into dim_faixa_etaria values ('5', '41 a 50 anos');
+insert into dim_faixa_etaria values ('6', '51 a 60 anos');
+insert into dim_faixa_etaria values ('7', '61 a 70 anos');
+insert into dim_faixa_etaria values ('8', '71 a 80 anos');
+insert into dim_faixa_etaria values ('9', 'Maiores de 80 anos');
+insert into dim_faixa_etaria values ('0', 'Não se aplica');
 
 -- Tabela auxiliar com a resposta completa montada com referência aos códigos e descrição textual a ser retornada a partir de um CNPJ fornecido.
 drop table if exists resposta_cnpj;
@@ -280,9 +364,9 @@ create table resposta_cnpj (
 	-- RAZÃO_SOCIAL DA EMPRESA
 	empresa_razao_social VARCHAR,
 	-- CÓDIGO DA NATUREZA JURÍDICA
-	empresa_codigo_natureza_juridica SMALLINT,
+	empresa_codigo_natureza_juridica VARCHAR(3),
 	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
-	empresa_qualificacao_do_responsavel SMALLINT,
+	empresa_qualificacao_do_responsavel VARCHAR(3),
 	-- CAPITAL SOCIAL DA EMPRESA
 	empresa_capital_social VARCHAR,
 	-- CÓDIGO DO PORTE DA EMPRESA:
@@ -330,7 +414,7 @@ create table resposta_cnpj (
 drop table if exists resposta_socios;
 create table resposta_socios (
 		-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (CADASTRO NACIONAL DA PESSOA JURÍDICA) a ser buscado
-		cnpj_basico VARCHAR(8) PRIMARY KEY,
+		cnpj_basico VARCHAR(8),
 		-- CÓDIGO DO IDENTIFICADOR DE SÓCIO
 			-- 1 - PESSOA JURÍDICA
 			-- 2 - PESSOA FÍSICA
@@ -379,6 +463,8 @@ ALTER TABLE IF EXISTS simples DROP CONSTRAINT IF EXISTS pk_simples_id;
 ALTER TABLE simples ADD CONSTRAINT pk_simples_id PRIMARY KEY (cnpj_basico);
 ALTER TABLE IF EXISTS socio DROP CONSTRAINT IF EXISTS pk_socio_id;
 ALTER TABLE socio ADD CONSTRAINT pk_socio_id PRIMARY KEY (cnpj_basico);
+ALTER TABLE IF EXISTS resposta_socios DROP CONSTRAINT IF EXISTS pk_resposta_socios_id;
+ALTER TABLE resposta_socios ADD CONSTRAINT pk_resposta_socios_id PRIMARY KEY (cnpj_basico);
 
 -- Foreign Keys:
 -- ALTER TABLE cnae_cnpj ADD CONSTRAINT fk_cnae_cnpj_cnpj FOREIGN KEY (cnpj) REFERENCES empresa (cnpj);
@@ -396,3 +482,4 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_situacao_cadastral O
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_simples_mei_simples ON simples (opcao_pelo_mei, opcao_pelo_simples);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_resposta_cnpj ON resposta_cnpj (estabelecimento_cnpj_basico);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_resposta_socios ON resposta_socios (cnpj_basico);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_resposta_cnpj_estabelecimento_cnpj_dv_idx on resposta_cnpj(estabelecimento_cnpj_dv);
