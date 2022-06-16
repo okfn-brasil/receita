@@ -30,21 +30,20 @@ mapeamento_tabelas_zip = {
     "qualificacao_socio": "QUALS",
     "natureza_juridica": "NATJU",
     "cnae": "CNAE",
-    #"motivo_situacao_cadastral": "MOTI"
 }
 
 # Mapeamento campos por [índice] .csv estabelecimento → nome dos campos tabela BD
 mapeamento_nome_campos = {
-    'empresa': ['cnpj', 'razao_social', 'codigo_natureza_juridica',  'qualificacao_do_responsavel', 'capital_social', 'porte', 'ente_federativo_responsavel'],
-    'estabelecimento': ['cnpj_basico', 'cnpj_ordem', 'cnpj_dv', 'identificador_matriz_filial', 'nome_fantasia', 'situacao_cadastral', 'data_situacao_cadastral', 'motivo_situacao_cadastral', 'nome_cidade_exterior', 'pais', 'data_inicio_atividade', 'cnae_fiscal', 'cnae_fiscal_secundario', 'tipo_logradouro',
-    'logradouro', 'numero', 'complemento', 'bairro', 'cep', 'uf', 'municipio', 'ddd_1', 'telefone_1', 'ddd_2', 'telefone_2', 'ddd_fax', 'telefone_fax', 'correio_eletronico', 'situacao_especial', 'data_situacao_especial'],
-    'simples': ['cnpj_basico', 'opcao_pelo_simples', 'data_opcao_pelo_simples', 'data_exclusao_pelo_simples', 'opcao_pelo_mei', 'data_opcao_pelo_mei', 'data_exclusao_pelo_mei'],
-    'socio': ['cnpj_basico', 'identificador_socio', 'razao_social', 'cnpj_cpf_socio', 'codigo_qualificacao_socio', 'data_entrada_sociedade', 'codigo_pais_socio_estrangeiro', 'numero_cpf_representante_legal', 'nome_representante_legal', 'codigo_qualificacao_representante_legal', 'faixa_etaria'],
-    'pais': ['codigo', 'descricao'],
-    'municipio': ['codigo', 'descricao'],
-    'qualificacao_socio': ['codigo', 'descricao'],
-    'natureza_juridica': ['codigo', 'descricao'],
-    'cnae': ['codigo', 'descricao']
+    'empresa': {'cnpj': str, 'razao_social':str, 'codigo_natureza_juridica':int,  'qualificacao_do_responsavel':int, 'capital_social':str, 'porte':str, 'ente_federativo_responsavel':str},
+    'estabelecimento': {'cnpj_basico':str, 'cnpj_ordem':str, 'cnpj_dv':str, 'identificador_matriz_filial':str, 'nome_fantasia':str, 'situacao_cadastral':str, 'data_situacao_cadastral':str, 'motivo_situacao_cadastral':str, 'nome_cidade_exterior':str, 'pais':str, 'data_inicio_atividade':str, 'cnae_fiscal':str, 'cnae_fiscal_secundario':str, 'tipo_logradouro':str,
+    'logradouro':str, 'numero':str, 'complemento':str, 'bairro':str, 'cep':str, 'uf':str, 'municipio':str, 'ddd_1':str, 'telefone_1':str, 'ddd_2':str, 'telefone_2':str, 'ddd_fax':str, 'telefone_fax':str, 'correio_eletronico':str, 'situacao_especial':str, 'data_situacao_especial'},
+    'simples': {'cnpj_basico':str, 'opcao_pelo_simples':str, 'data_opcao_pelo_simples':str, 'data_exclusao_pelo_simples':str, 'opcao_pelo_mei':str, 'data_opcao_pelo_mei':str, 'data_exclusao_pelo_mei'},
+    'socio': {'cnpj_basico':str, 'identificador_socio':str, 'razao_social':str, 'cnpj_cpf_socio':str, 'codigo_qualificacao_socio':str, 'data_entrada_sociedade':str, 'codigo_pais_socio_estrangeiro':str, 'numero_cpf_representante_legal':str, 'nome_representante_legal':str, 'codigo_qualificacao_representante_legal':str, 'faixa_etaria'},
+    'pais': {'codigo':str, 'descricao':str},
+    'municipio': {'codigo':str, 'descricao':str},
+    'qualificacao_socio': {'codigo':int, 'descricao':str},
+    'natureza_juridica': {'codigo':int, 'descricao':str},
+    'cnae': {'codigo':int, 'descricao':str}
 }
 
 # Pegar a lista de todos os nomes de arquivo .zip que tenham uma referência à string "nome_arquivo"
@@ -81,7 +80,7 @@ def status_carga(parcial: int, total: int):
 # A referência ao arquivo .csv é a string caminho_nome_arquivo, tabela é a chave da tabela em que será inserida
 # Retorna True caso a operação realize o registro dos dados no banco e False caso contrário
 def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
-    campos_selecionados = mapeamento_nome_campos[tabela]
+    campos_selecionados = list(mapeamento_nome_campos[tabela].keys())
     try:
         read_chunk_size = 100_000
         write_chunk_size = 10_000
@@ -89,8 +88,12 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
         n_items_csv = 0
         # Total de itens já salvos no banco de dados
         n_carregados = 0
+
+        # Configurando datatypes para evitar erros de carga do .CSV para a memória via pandas
+        data_types = {}
+
         # Passo intermediário para pegar o número total de itens do .csv
-        with pd.read_csv(caminho_nome_arquivo, chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None, index_col=False, low_memory=False) as csv_reader:
+        with pd.read_csv(caminho_nome_arquivo, dtype=mapeamento_nome_campos[tabela], chunksize=read_chunk_size, delimiter=';', names=campos_selecionados, encoding='latin-1', on_bad_lines='warn', header=None, index_col=False, low_memory=False) as csv_reader:
             for chunk in csv_reader:
                 n_items_csv = n_items_csv + int(chunk.shape[0])
             print(f'Total de {n_items_csv} a serem carregados em memória')
