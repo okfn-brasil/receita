@@ -11,9 +11,9 @@ create table empresa (
 	-- NOME EMPRESARIAL DA PESSOA JURÍDICA
 	razao_social VARCHAR,
 	-- CÓDIGO DA NATUREZA JURÍDICA
-	codigo_natureza_juridica VARCHAR(3),
+	codigo_natureza_juridica VARCHAR(4),
 	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
-	qualificacao_do_responsavel VARCHAR(3),
+	qualificacao_do_responsavel VARCHAR(2),
 	-- CAPITAL SOCIAL DA EMPRESA
 	capital_social VARCHAR,
 	-- CÓDIGO DO PORTE DA EMPRESA:
@@ -214,7 +214,7 @@ create table qualificacao_socio (
 drop table if exists natureza_juridica;
 create table natureza_juridica (
 	-- CÓDIGO DA NATUREZA JURÍDICA
-	codigo VARCHAR(3),
+	codigo VARCHAR(4),
 	-- NOME DA NATUREZA JURÍDICA
 	descricao VARCHAR
 );
@@ -223,7 +223,7 @@ create table natureza_juridica (
 drop table if exists cnae;
 create table cnae (
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA
-	codigo VARCHAR(3),
+	codigo VARCHAR(7),
 	-- NOME DA ATIVIDADE ECONÔMICA
 	descricao VARCHAR
 );
@@ -302,18 +302,20 @@ insert into dim_faixa_etaria values ('0', 'Não se aplica');
 -- Tabela auxiliar com a resposta completa montada com referência aos códigos e descrição textual a ser retornada a partir de um CNPJ fornecido.
 drop table if exists resposta_cnpj;
 create table resposta_cnpj (
+	-- id sequencial interno
+	id SERIAL,
  	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (OITO PRIMEIROS DÍGITOS DO CNPJ).
  	estabelecimento_cnpj_basico VARCHAR(8),
  	-- NÚMERO DO ESTABELECIMENTO DE INSCRIÇÃO NO CNPJ (DO NONO ATÉ O DÉCIMO SEGUNDO DÍGITO DO CNPJ).
  	estabelecimento_cnpj_ordem VARCHAR(4),
  	-- DÍGITO VERIFICADOR DO NÚMERO DE INSCRIÇÃO NO CNPJ (DOIS ÚLTIMOS DÍGITOS DO CNPJ).
- 	estabelecimento_cnpj_dv VARCHAR(10),
+ 	estabelecimento_cnpj_dv VARCHAR(2),
 	-- Chave primária é uma combinação das três colunas anteriores
 	PRIMARY KEY(estabelecimento_cnpj_basico, estabelecimento_cnpj_ordemestabelecimento_cnpj_dv),
  	-- CÓDIGO DO IDENTIFICADOR MATRIZ/FILIAL:
  		-- '1 - MATRIZ'
  		-- '2 - FILIAL'
- 	estabelecimento_identificador_matriz_filial VARCHAR,
+ 	estabelecimento_identificador_matriz_filial CHAR,
  	-- CORRESPONDE AO NOME FANTASIA
  	estabelecimento_nome_fantasia VARCHAR,
  	-- CÓDIGO DA SITUAÇÃO CADASTRAL:
@@ -322,7 +324,7 @@ create table resposta_cnpj (
  		-- 3 - SUSPENSA
  		-- 4 - INAPTA
  		-- 08 - BAIXADA
- 	estabelecimento_situacao_cadastral VARCHAR(15),
+ 	estabelecimento_situacao_cadastral VARCHAR(2),
  	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
  	estabelecimento_data_situacao_cadastral VARCHAR(10),
  	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
@@ -401,7 +403,7 @@ create table resposta_cnpj (
 
 	-- cnae
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA PRINCIPAL DO ESTABELECIMENTO
-	cnae VARCHAR,
+	cnae VARCHAR(10),
 
 	-- CÓDIGO E NOME DO PAÍS
 	pais VARCHAR(50),
@@ -413,6 +415,8 @@ create table resposta_cnpj (
 --  do qualificação do sócio a partir do código
 drop table if exists resposta_socios;
 create table resposta_socios (
+		-- id sequencial interno
+		id SERIAL PRIMARY KEY,
 		-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (CADASTRO NACIONAL DA PESSOA JURÍDICA) a ser buscado
 		cnpj_basico VARCHAR(8),
 		-- CÓDIGO DO IDENTIFICADOR DE SÓCIO
@@ -448,11 +452,10 @@ create table resposta_socios (
 			-- 7 para os intervalos entre 61 a 70 anos
 			-- 8 para os intervalos entre 71 a 80 anos
 			-- 9 para maiores de 80 anos.
-		faixa_etaria VARCHAR(10)
+		faixa_etaria VARCHAR
 );
 
 -- Primary keys:
-
 ALTER TABLE IF EXISTS empresa DROP CONSTRAINT IF EXISTS pk_empresa_id;
 ALTER TABLE empresa ADD CONSTRAINT pk_empresa_id PRIMARY KEY (cnpj);
 ALTER TABLE IF EXISTS cnae DROP CONSTRAINT IF EXISTS pk_cnae_codigo;
@@ -464,7 +467,6 @@ ALTER TABLE simples ADD CONSTRAINT pk_simples_id PRIMARY KEY (cnpj_basico);
 ALTER TABLE IF EXISTS socio DROP CONSTRAINT IF EXISTS pk_socio_id;
 ALTER TABLE socio ADD CONSTRAINT pk_socio_id PRIMARY KEY (cnpj_basico);
 ALTER TABLE IF EXISTS resposta_socios DROP CONSTRAINT IF EXISTS pk_resposta_socios_id;
-ALTER TABLE resposta_socios ADD CONSTRAINT pk_resposta_socios_id PRIMARY KEY (cnpj_basico);
 
 -- Foreign Keys:
 -- ALTER TABLE cnae_cnpj ADD CONSTRAINT fk_cnae_cnpj_cnpj FOREIGN KEY (cnpj) REFERENCES empresa (cnpj);
