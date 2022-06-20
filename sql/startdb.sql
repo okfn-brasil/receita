@@ -257,16 +257,16 @@ insert into dim_matriz_filial values ('2', 'FILIAL');
 drop table if exists dim_situacao_cadastral;
 create table dim_situacao_cadastral (
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA
-	codigo CHAR,
+	codigo VARCHAR(2),
 	-- NOME DA ATIVIDADE ECONÔMICA
 	descricao VARCHAR
 );
 
-insert into dim_situacao_cadastral values ('1', 'NULA');
-insert into dim_situacao_cadastral values ('2', 'ATIVA');
-insert into dim_situacao_cadastral values ('3', 'SUSPENSA');
-insert into dim_situacao_cadastral values ('4', 'INAPTA');
-insert into dim_situacao_cadastral values ('8', 'BAIXADA');
+insert into dim_situacao_cadastral values ('01', 'NULA');
+insert into dim_situacao_cadastral values ('02', 'ATIVA');
+insert into dim_situacao_cadastral values ('03', 'SUSPENSA');
+insert into dim_situacao_cadastral values ('04', 'INAPTA');
+insert into dim_situacao_cadastral values ('08', 'BAIXADA');
 
 drop table if exists dim_identificador_socio;
 create table dim_identificador_socio (
@@ -311,7 +311,7 @@ create table resposta_cnpj (
  	-- DÍGITO VERIFICADOR DO NÚMERO DE INSCRIÇÃO NO CNPJ (DOIS ÚLTIMOS DÍGITOS DO CNPJ).
  	estabelecimento_cnpj_dv VARCHAR(2),
 	-- Chave primária é uma combinação das três colunas anteriores
-	PRIMARY KEY(estabelecimento_cnpj_basico, estabelecimento_cnpj_ordemestabelecimento_cnpj_dv),
+	PRIMARY KEY(estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv),
  	-- CÓDIGO DO IDENTIFICADOR MATRIZ/FILIAL:
  		-- '1 - MATRIZ'
  		-- '2 - FILIAL'
@@ -366,9 +366,9 @@ create table resposta_cnpj (
 	-- RAZÃO_SOCIAL DA EMPRESA
 	empresa_razao_social VARCHAR,
 	-- CÓDIGO DA NATUREZA JURÍDICA
-	empresa_codigo_natureza_juridica VARCHAR(3),
+	empresa_natureza_juridica VARCHAR,
 	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
-	empresa_qualificacao_do_responsavel VARCHAR(3),
+	empresa_qualificacao_do_responsavel VARCHAR(30),
 	-- CAPITAL SOCIAL DA EMPRESA
 	empresa_capital_social VARCHAR,
 	-- CÓDIGO DO PORTE DA EMPRESA:
@@ -423,7 +423,7 @@ create table resposta_socios (
 			-- 1 - PESSOA JURÍDICA
 			-- 2 - PESSOA FÍSICA
 			-- 3 - ESTRANGEIRO
-		identificador_socio VARCHAR(3),
+		identificador_socio VARCHAR(30),
 		-- NOME DO SÓCIO PESSOA FÍSICA OU A RAZÃO SOCIAL E/OU NOME EMPRESARIAL DA PESSOA JURÍDICA
 		-- E/OU NOME DO SÓCIO /RAZÃO SOCIAL DO SÓCIO ESTRANGEIRO
 		razao_social VARCHAR,
@@ -440,7 +440,7 @@ create table resposta_socios (
 		-- NOME DO REPRESENTANTE LEGAL
 		nome_representante_legal VARCHAR,
 		-- CÓDIGO DA QUALIFICAÇÃO DO REPRESENTANTE LEGAL
-		codigo_qualificacao_representante_legal VARCHAR(3),
+		codigo_qualificacao_representante_legal VARCHAR,
 		-- CÓDIGO CORRESPONDENTE À FAIXA ETÁRIA DO SÓCIO
 			-- 0 para não se aplica.
 			-- 1 para os intervalos entre 0 a 12 anos
