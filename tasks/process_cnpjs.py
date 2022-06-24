@@ -328,7 +328,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
                 resposta_cnpj['estabelecimento_nome_cidade_exterior'] = estabelecimento_nome_cidade_exterior
             else:
                 resposta_cnpj['estabelecimento_nome_cidade_exterior'] = None
-            
+
             estabelecimento_data_inicio_atividade = campos_cnpj['estabelecimento_data_inicio_atividade']
             if estabelecimento_data_inicio_atividade is not None:
                 data_formatada = formata_data(estabelecimento_data_inicio_atividade)
@@ -728,6 +728,29 @@ def processa_cnpj_socios(offset, block_size):
         # Incrementa o bloco
         offset = offset + block_size
 
+def _generate_cnpj_dv(self, cnpj_without_dv: str) -> str:
+    first_digit = self._calculate_cnpj_dv_digit(cnpj_without_dv)
+    second_digit = self._calculate_cnpj_dv_digit(
+        cnpj_without_dv, first_digit=first_digit
+    )
+    return first_digit + second_digit
+
+def _calculate_cnpj_dv_digit(self, cnpj_without_dv: str, first_digit: str = "") -> str:
+    weights = (6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+    if first_digit == "":
+        weights = weights[1:]
+
+    cnpj_to_weight = cnpj_without_dv + first_digit
+    weighted_digits = [
+        int(num) * weight for num, weight in zip(cnpj_to_weight, weights)
+    ]
+    sum_remainder = sum(weighted_digits) % 11
+
+    if sum_remainder < 2:
+        return "0"
+    else:
+        return str(11 - sum_remainder)
+
 if __name__ == "__main__":
     # Estabelece conexão com o BD
     conn = conecta('change here')
@@ -752,9 +775,15 @@ if __name__ == "__main__":
                     # Caso hajam dados de estabelecimento, unifica o documento
                     if resposta_cnpjs_estabelecimento is not None:
                         resposta_cnpj = dict(resposta_cnpjs_empresa, **resposta_cnpjs_estabelecimento)
-                    # Caso contrário, apenas os dados de empresa serão utilizados, necessário passar dados de estabelecimento em branco no dicionário
+                    # Caso contrário, apenas os dados de empresa serão utilizados, necessário 1) passar dados de estabelecimento em branco no dicionário 2) Definir cnpj_ordem e calcular dv
                     else:
                         resposta_cnpj = set_estabelecimento_blank(resposta_cnpjs_empresa)
+                        # Aqui se está supondo que a empresa possui apenas um estabelecimento, a matriz, portanto cuja ordem será 0001, com dv calculado a partir do método de criação de um dv
+                        resposta_cnpj['estabelecimento_cnpj_ordem'] = '0001'
+                        cnpj_basico_ordem = resposta_cnpj['estabelecimento_cnpj_basico'] + resposta_cnpj['estabelecimento_cnpj_ordem']
+                        cnpj_dv = _generate_cnpj_dv('cnpj_basico_ordem')
+                        if cnpj_dv:
+                            resposta_cnpj['estabelecimento_cnpj_dv'] = cnpj_dv
                     # Adiciona o dicionário À lista de objetos a serem inseridos em batch
                     lista_resposta_cnpj.append(list(resposta_cnpj.values()))
                 # Salva os registros da fatia em batch no banco
