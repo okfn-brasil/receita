@@ -54,7 +54,7 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
     sql = sql + ' empresa.razao_social as empresa_razao_social,'
     sql = sql + ' empresa.codigo_natureza_juridica as empresa_codigo_natureza_juridica,'
     sql = sql + ' empresa.qualificacao_do_responsavel as empresa_qualificacao_do_responsavel,'
-    sql = sql + ' empresa.capital_social  as empresa_capital_social,'
+    sql = sql + ' empresa.capital_social as empresa_capital_social,'
     sql = sql + ' empresa.porte as empresa_porte,'
     sql = sql + ' empresa.ente_federativo_responsavel as empresa_ente_federativo_responsavel'
     sql = sql + ' FROM empresa'
@@ -90,7 +90,7 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
             empresa_qualificacao_do_responsavel = remove_breaks(campos_cnpj['empresa_qualificacao_do_responsavel'])
             if empresa_qualificacao_do_responsavel is not None and empresa_qualificacao_do_responsavel != '':
                 # SQL a ser realizada para buscar as informações do porte
-                sql = f'select * from dim_porte_empresa where codigo = \'{empresa_porte}\''
+                sql = f'select * from qualificacao_socio where codigo = \'{empresa_qualificacao_do_responsavel}\''
                 cursor.execute(sql)
                 results = cursor.fetchall()
                 if results is not None and results != []:
@@ -103,11 +103,10 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
                     else:
                         resposta_cnpj['empresa_qualificacao_do_responsavel'] = empresa_qualificacao_do_responsavel
                 else:
-                    print(f'Erro! Porte da empresa {empresa_porte} não encontrado')
+                    print(f'Erro! Porte da empresa {empresa_qualificacao_do_responsavel} não encontrado')
                     resposta_cnpj['empresa_qualificacao_do_responsavel'] = empresa_qualificacao_do_responsavel
             else:
                 resposta_cnpj['empresa_qualificacao_do_responsavel'] = None
-
 
             resposta_cnpj['empresa_capital_social'] = remove_breaks(campos_cnpj['empresa_capital_social'])
 
@@ -278,7 +277,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
 
             estabelecimento_nome_fantasia = str(campos_cnpj['estabelecimento_nome_fantasia'])
             if estabelecimento_nome_fantasia is not None:
-                estabelecimento_nome_fantasia = remove_breaks(estabelecimento_nome_fantasia. replace('\'', '`'))
+                estabelecimento_nome_fantasia = remove_breaks(estabelecimento_nome_fantasia.replace('\'', '`'))
                 # Remove espaços em branco
                 if 'None' in estabelecimento_nome_fantasia:
                     estabelecimento_nome_fantasia = None
@@ -307,11 +306,14 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             else:
                 resposta_cnpj['estabelecimento_situacao_cadastral'] = None
 
-            estabelecimento_data_situacao_cadastral = remove_breaks(campos_cnpj['estabelecimento_data_situacao_cadastral'])
+            estabelecimento_data_situacao_cadastral = campos_cnpj['estabelecimento_data_situacao_cadastral']
             if estabelecimento_data_situacao_cadastral is not None:
-                if data != '0':
+                if estabelecimento_data_situacao_cadastral != '0' and estabelecimento_data_situacao_cadastral != '':
                     data_formatada = formata_data(estabelecimento_data_situacao_cadastral)
+                    data_formatada = remove_breaks(data_formatada)
                     resposta_cnpj['estabelecimento_data_situacao_cadastral'] = data_formatada
+                else:
+                    resposta_cnpj['estabelecimento_data_situacao_cadastral'] = None
             else:
                 resposta_cnpj['estabelecimento_data_situacao_cadastral'] = None
 
@@ -319,13 +321,14 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
 
             estabelecimento_nome_cidade_exterior = campos_cnpj['estabelecimento_nome_cidade_exterior']
             if estabelecimento_nome_cidade_exterior is not None:
-                estabelecimento_nome_cidade_exterior = remove_breaks(estabelecimento_nome_cidade_exterior.replace('\'', '`'))
-                if 'None' in estabelecimento_nome_cidade_exterior:
+                estabelecimento_nome_cidade_exterior = estabelecimento_nome_cidade_exterior.replace('\'', '`')
+                estabelecimento_nome_cidade_exterior = remove_breaks(estabelecimento_nome_cidade_exterior)
+                if 'None' in estabelecimento_nome_cidade_exterior or estabelecimento_nome_cidade_exterior == '':
                     estabelecimento_nome_cidade_exterior = None
                 resposta_cnpj['estabelecimento_nome_cidade_exterior'] = estabelecimento_nome_cidade_exterior
             else:
                 resposta_cnpj['estabelecimento_nome_cidade_exterior'] = None
-
+            
             estabelecimento_data_inicio_atividade = campos_cnpj['estabelecimento_data_inicio_atividade']
             if estabelecimento_data_inicio_atividade is not None:
                 data_formatada = formata_data(estabelecimento_data_inicio_atividade)
@@ -337,7 +340,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             estabelecimento_cnae_fiscal_secundario = campos_cnpj['estabelecimento_cnae_fiscal_secundario']
             if estabelecimento_cnae_fiscal_secundario is not None:
                 if estabelecimento_cnae_fiscal_secundario != '':
-                    items = estabelecimento_cnae_fiscal_secundario.split(';')
+                    items = estabelecimento_cnae_fiscal_secundario.split(',')
                     items_desc_completa = []
                     if len(items) >= 1:
                         for cnae_codigo in items:
@@ -372,7 +375,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             estabelecimento_complemento = str(campos_cnpj['estabelecimento_complemento'])
             if estabelecimento_complemento is not None:
                 estabelecimento_complemento = remove_breaks(estabelecimento_complemento.replace('\'', '`'))
-                if 'None' in estabelecimento_complemento:
+                if 'None' in estabelecimento_complemento or estabelecimento_complemento == '':
                     estabelecimento_complemento = None
                 resposta_cnpj['estabelecimento_complemento'] = estabelecimento_complemento
             else:
@@ -383,7 +386,6 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             # Corrigindo a formatação do CEP
             cep = campos_cnpj['estabelecimento_cep']
             if cep is not None:
-
                 # Remove o ponto
                 cep = remove_breaks(cep.replace('.', ''))
                 # Corrige erros de corte de zero à esquerda
@@ -398,35 +400,38 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
 
             # Tratando campos de telefone
             estabelecimento_ddd_telefone_1 = remove_breaks(str(campos_cnpj['estabelecimento_ddd_1'])[:-2] + str(campos_cnpj['estabelecimento_telefone_1']))
-            if 'None' in estabelecimento_ddd_telefone_1:
+            if 'None' in estabelecimento_ddd_telefone_1 or estabelecimento_ddd_telefone_1 == '':
                 estabelecimento_ddd_telefone_1 = None
             resposta_cnpj['estabelecimento_ddd_telefone_1'] = estabelecimento_ddd_telefone_1
 
             estabelecimento_ddd_telefone_2 = remove_breaks(str(campos_cnpj['estabelecimento_ddd_2'])[:-2] + str(campos_cnpj['estabelecimento_telefone_2']))
-            if 'None' in estabelecimento_ddd_telefone_2:
+            if 'None' in estabelecimento_ddd_telefone_2 or estabelecimento_ddd_telefone_2 == '':
                 estabelecimento_ddd_telefone_2 = None
             resposta_cnpj['estabelecimento_ddd_telefone_2'] = estabelecimento_ddd_telefone_2
 
             estabelecimento_ddd_telefone_fax = remove_breaks(str(campos_cnpj['estabelecimento_ddd_fax'])[:-2] + str(campos_cnpj['estabelecimento_telefone_fax']))
-            if 'None' in estabelecimento_ddd_telefone_fax:
+            if 'None' in estabelecimento_ddd_telefone_fax or estabelecimento_ddd_telefone_fax =='':
                 estabelecimento_ddd_telefone_fax = None
 
             resposta_cnpj['estabelecimento_ddd_telefone_fax'] = estabelecimento_ddd_telefone_fax
             estabelecimento_correio_eletronico = remove_breaks(str(campos_cnpj['estabelecimento_correio_eletronico']))
             estabelecimento_correio_eletronico = estabelecimento_correio_eletronico.replace('\"', '')
             estabelecimento_correio_eletronico = estabelecimento_correio_eletronico.replace('\'', '')
-            if 'None' in estabelecimento_correio_eletronico:
+            if 'None' in estabelecimento_correio_eletronico or estabelecimento_correio_eletronico == '':
                 estabelecimento_correio_eletronico = None
             resposta_cnpj['estabelecimento_correio_eletronico'] = estabelecimento_correio_eletronico
 
-            estabelecimento_situacao_especial = remove_breaks(campos_cnpj['estabelecimento_situacao_especial'])
-            if estabelecimento_situacao_especial is not None and 'None' in estabelecimento_situacao_especial:
-                estabelecimento_situacao_especial = None
+            estabelecimento_situacao_especial = campos_cnpj['estabelecimento_situacao_especial']
+            if estabelecimento_situacao_especial is not None:
+                estabelecimento_situacao_especial = remove_breaks(estabelecimento_situacao_especial)
+                if 'None' in estabelecimento_situacao_especial or estabelecimento_situacao_especial == '':
+                    estabelecimento_situacao_especial = None
             resposta_cnpj['estabelecimento_situacao_especial'] = estabelecimento_situacao_especial
 
             estabelecimento_data_situacao_especial = campos_cnpj['estabelecimento_data_situacao_especial']
-            if estabelecimento_data_situacao_especial is not None and 'None' in estabelecimento_data_situacao_especial:
-                estabelecimento_data_situacao_especial = None
+            if estabelecimento_data_situacao_especial is not None:
+                if 'None' in estabelecimento_data_situacao_especial or estabelecimento_data_situacao_especial == '':
+                    estabelecimento_data_situacao_especial = None
             resposta_cnpj['estabelecimento_data_situacao_especial'] = estabelecimento_data_situacao_especial
 
             # Realizar a consulta complementar para o cnae
@@ -450,39 +455,47 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
                     print(f'Erro! CNAE {cnae_codigo} não encontrado')
                     resposta_cnpj['cnae'] =  str(campos_cnpj['estabelecimento_cnae_fiscal'])
             else:
-                resposta_cnpj['cnae'] = str(campos_cnpj['estabelecimento_cnae_fiscal'])
+                resposta_cnpj['cnae'] = None
 
             # Realizar consulta à tabela país, caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
-            pais_codigo = remove_breaks(str(campos_cnpj['estabelecimento_pais']))
-            if pais_codigo != '':
-                # Brasil
-                if pais_codigo == 'None':
-                    pais_codigo = '105'
-                else:
-                    # Remove '.0'
-                    pais_codigo = pais_codigo[:-2]
-                # SQL a ser realizada para buscar as informações do país
-                sql_pais = f'select * from pais where codigo = \'{pais_codigo}\''
-                cursor.execute(sql_pais)
-                results = cursor.fetchall()
-                if results is not None and results != []:
-                    # Should be a single result, fetch first item
-                    campos_pais = results[0]
-                    if campos_pais is not None:
-                        pais_descricao = str(campos_pais['descricao'])
-                        pais_cod_desc = f'{pais_codigo} - {pais_descricao}'
+            pais_codigo = campos_cnpj['estabelecimento_pais']
+            if pais_codigo is not None:
+                pais_codigo = remove_breaks(pais_codigo)
+                print(f'pais_codigo: {pais_codigo}')
+                if pais_codigo != '':
+                    # Brasil
+                    if 'None' in pais_codigo:
+                        pais_codigo = '105'
+                    if '.0' in pais_codigo:
+                        # Remove '.0'
+                        pais_codigo = pais_codigo[:-2]
+                    # Completa com zeros à esquerda até o número ficar com 3 dígitos
+                    while len(pais_codigo) < 3:
+                        pais_codigo = '0' + pais_codigo
+                    # SQL a ser realizada para buscar as informações do país
+                    sql_pais = f'select * from pais where codigo = \'{pais_codigo}\''
+                    cursor.execute(sql_pais)
+                    results = cursor.fetchall()
+                    if results is not None and results != []:
+                        # Should be a single result, fetch first item
+                        campos_pais = results[0]
+                        if campos_pais is not None:
+                            pais_descricao = str(campos_pais['descricao'])
+                            pais_cod_desc = f'{pais_codigo} - {pais_descricao}'
+                        else:
+                            pais_cod_desc = pais_cod
+                        resposta_cnpj['pais'] = f'{pais_cod_desc}'
                     else:
-                        pais_cod_desc = pais_cod
-                    resposta_cnpj['pais'] = f'{pais_cod_desc}'
+                        print(f'Erro! País {pais_codigo} não encontrado')
+                        resposta_cnpj['pais'] =  str(campos_cnpj['estabelecimento_pais'])
                 else:
-                    print(f'Erro! País {pais_codigo} não encontrado')
-                    resposta_cnpj['pais'] =  str(campos_cnpj['estabelecimento_pais'])
+                    resposta_cnpj['pais'] = None
             else:
-                resposta_cnpj['pais'] = str(campos_cnpj['estabelecimento_pais'])
+                resposta_cnpj['pais'] = None
 
             # Realizar consulta para busca do município:
             municipio_codigo = str(campos_cnpj['estabelecimento_municipio'])
-            if (municipio_codigo != '') and (pais_codigo != 'None'):
+            if municipio_codigo != '' and 'None' not in municipio_codigo:
                 sql_municipio = f'select * from municipio where codigo = \'{municipio_codigo}\''
                 if cursor is not None:
                     cursor.execute(sql_municipio)
@@ -500,7 +513,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
                         print(f'Erro! Município {municipio_codigo} não encontrado.')
                         resposta_cnpj['municipio'] = str(campos_cnpj['estabelecimento_municipio'])
             else:
-                resposta_cnpj['municipio'] = str(campos_cnpj['estabelecimento_municipio'])
+                resposta_cnpj['municipio'] = None
             return resposta_cnpj
     else:
         print("Cursor is None")
@@ -622,11 +635,15 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                 pais_codigo = str(campos_socios['socio_codigo_pais_socio_estrangeiro'])
                 if pais_codigo != '':
                     # Brasil
-                    if pais_codigo == 'None':
+                    if 'None' in pais_codigo:
                         pais_codigo = '105'
-                    else:
-                        # Remove '.0'
+                    # Remove '.0'
+                    if '.0' in pais_codigo:
                         pais_codigo = pais_codigo[:-2]
+                    # Preenche com zeros à esquerda:
+                    while len(pais_codigo) < 3:
+                        pais_codigo = '0' + pais_codigo
+
                     # SQL a ser realizada para buscar as informações do país
                     sql_pais = f'select * from pais where codigo = \'{pais_codigo}\''
                     cursor.execute(sql_pais)
