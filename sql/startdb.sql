@@ -311,11 +311,11 @@ create table resposta_cnpj (
  	-- DÍGITO VERIFICADOR DO NÚMERO DE INSCRIÇÃO NO CNPJ (DOIS ÚLTIMOS DÍGITOS DO CNPJ).
  	estabelecimento_cnpj_dv VARCHAR(2),
 	-- Chave primária é uma combinação das três colunas anteriores
-	PRIMARY KEY(estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv),
+	UNIQUE(estabelecimento_cnpj_basico, estabelecimento_cnpj_ordem, estabelecimento_cnpj_dv),
  	-- CÓDIGO DO IDENTIFICADOR MATRIZ/FILIAL:
  		-- '1 - MATRIZ'
  		-- '2 - FILIAL'
- 	estabelecimento_identificador_matriz_filial CHAR,
+ 	estabelecimento_identificador_matriz_filial VARCHAR(20),
  	-- CORRESPONDE AO NOME FANTASIA
  	estabelecimento_nome_fantasia VARCHAR,
  	-- CÓDIGO DA SITUAÇÃO CADASTRAL:
@@ -324,15 +324,15 @@ create table resposta_cnpj (
  		-- 3 - SUSPENSA
  		-- 4 - INAPTA
  		-- 08 - BAIXADA
- 	estabelecimento_situacao_cadastral VARCHAR(2),
+ 	estabelecimento_situacao_cadastral VARCHAR(20),
  	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
- 	estabelecimento_data_situacao_cadastral VARCHAR(10),
+ 	estabelecimento_data_situacao_cadastral VARCHAR(15),
  	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
  	estabelecimento_motivo_situacao_cadastral VARCHAR(11),
  	-- NOME DA CIDADE NO EXTERIOR
  	estabelecimento_nome_cidade_exterior VARCHAR,
  	-- DATA DE INÍCIO DA ATIVIDADE
- 	estabelecimento_data_inicio_atividade VARCHAR(10),
+ 	estabelecimento_data_inicio_atividade VARCHAR(15),
  	-- CÓDIGO DA(S) ATIVIDADE(S) ECONÔMICA(S) SECUNDÁRIA(S) DO ESTABELECIMENTO
  	estabelecimento_cnae_fiscal_secundario VARCHAR,
  	-- DESCRIÇÃO DO TIPO DE LOGRADOURO
@@ -360,7 +360,7 @@ create table resposta_cnpj (
  	-- SITUAÇÃO ESPECIAL DA EMPRESA
  	estabelecimento_situacao_especial VARCHAR,
  	-- DATA EM QUE A EMPRESA ENTROU EM SITUAÇÃO ESPECIAL
- 	estabelecimento_data_situacao_especial VARCHAR(10),
+ 	estabelecimento_data_situacao_especial VARCHAR(15),
 
 	-- Informações da tabela EMPRESA
 	-- RAZÃO_SOCIAL DA EMPRESA
@@ -368,7 +368,7 @@ create table resposta_cnpj (
 	-- CÓDIGO DA NATUREZA JURÍDICA
 	empresa_natureza_juridica VARCHAR,
 	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
-	empresa_qualificacao_do_responsavel VARCHAR(30),
+	empresa_qualificacao_do_responsavel VARCHAR(100),
 	-- CAPITAL SOCIAL DA EMPRESA
 	empresa_capital_social VARCHAR,
 	-- CÓDIGO DO PORTE DA EMPRESA:
@@ -388,22 +388,22 @@ create table resposta_cnpj (
 		-- EM BRANCO - OUTROS
 	simples_opcao_pelo_simples VARCHAR(20),
 	-- DATA DE OPÇÃO PELO SIMPLES
-	simples_data_opcao_pelo_simples VARCHAR(10),
+	simples_data_opcao_pelo_simples VARCHAR(15),
 	-- DATA DE EXCLUSÃO DO SIMPLES
-	simples_data_exclusao_pelo_simples VARCHAR(10),
+	simples_data_exclusao_pelo_simples VARCHAR(15),
 	-- INDICADOR DA EXISTÊNCIA DA OPÇÃO PELO MEI
 		-- S - SIM
 		-- N - NÃO
 		-- EM BRANCO - OUTROS
 	simples_opcao_pelo_mei VARCHAR(20),
 	-- DATA DE OPÇÃO PELO MEI
-	simples_data_opcao_pelo_mei VARCHAR(10),
+	simples_data_opcao_pelo_mei VARCHAR(15),
 	-- DATA DE EXCLUSÃO DO MEI
-	simples_data_exclusao_pelo_mei VARCHAR(10),
+	simples_data_exclusao_pelo_mei VARCHAR(15),
 
 	-- cnae
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA PRINCIPAL DO ESTABELECIMENTO
-	cnae VARCHAR(10),
+	cnae VARCHAR,
 
 	-- CÓDIGO E NOME DO PAÍS
 	pais VARCHAR(50),
