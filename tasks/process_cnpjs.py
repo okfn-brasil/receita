@@ -89,7 +89,7 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
             # Implementar select a partir da tabela qualificacao_socio
             empresa_qualificacao_do_responsavel = remove_breaks(campos_cnpj['empresa_qualificacao_do_responsavel'])
             if empresa_qualificacao_do_responsavel is not None and empresa_qualificacao_do_responsavel != '':
-                # SQL a ser realizada para buscar as informações do porte
+                # SQL a ser realizada para buscar as informações da qualificação do responsável
                 sql = f'select * from qualificacao_socio where codigo = \'{empresa_qualificacao_do_responsavel}\''
                 cursor.execute(sql)
                 results = cursor.fetchall()
@@ -112,7 +112,7 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
 
             # Implement select from dim_porte_empresa
             empresa_porte = remove_breaks(str(campos_cnpj['empresa_porte']))
-            if empresa_porte != '':
+            if empresa_porte is not None and empresa_porte != '':
                 # SQL a ser realizada para buscar as informações do porte
                 sql = f'select * from dim_porte_empresa where codigo = \'{empresa_porte}\''
                 cursor.execute(sql)
@@ -728,14 +728,14 @@ def processa_cnpj_socios(offset, block_size):
         # Incrementa o bloco
         offset = offset + block_size
 
-def _generate_cnpj_dv(self, cnpj_without_dv: str) -> str:
-    first_digit = self._calculate_cnpj_dv_digit(cnpj_without_dv)
-    second_digit = self._calculate_cnpj_dv_digit(
+def generate_cnpj_dv(cnpj_without_dv: str) -> str:
+    first_digit = calculate_cnpj_dv_digit(cnpj_without_dv)
+    second_digit = calculate_cnpj_dv_digit(
         cnpj_without_dv, first_digit=first_digit
     )
     return first_digit + second_digit
 
-def _calculate_cnpj_dv_digit(self, cnpj_without_dv: str, first_digit: str = "") -> str:
+def calculate_cnpj_dv_digit(cnpj_without_dv: str, first_digit: str = "") -> str:
     weights = (6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
     if first_digit == "":
         weights = weights[1:]
@@ -764,6 +764,7 @@ if __name__ == "__main__":
             lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
             # Lista de objetos do tipo dicionário a serem inseridos em batch para a resposta_cnpj
             lista_resposta_cnpj = []
+            empresas_sem_estabelecimento = 0
             if len(lista_cnpj) > 0:
                 for cnpj in lista_cnpj:
                     # Dicionário com os campos a serem salvos
@@ -781,13 +782,16 @@ if __name__ == "__main__":
                         # Aqui se está supondo que a empresa possui apenas um estabelecimento, a matriz, portanto cuja ordem será 0001, com dv calculado a partir do método de criação de um dv
                         resposta_cnpj['estabelecimento_cnpj_ordem'] = '0001'
                         cnpj_basico_ordem = resposta_cnpj['estabelecimento_cnpj_basico'] + resposta_cnpj['estabelecimento_cnpj_ordem']
-                        cnpj_dv = _generate_cnpj_dv('cnpj_basico_ordem')
+                        cnpj_dv = generate_cnpj_dv(cnpj_basico_ordem)
                         if cnpj_dv:
                             resposta_cnpj['estabelecimento_cnpj_dv'] = cnpj_dv
-                    # Adiciona o dicionário À lista de objetos a serem inseridos em batch
+                            #print(f'cnpj completo criado para a empresa sem estabelecimento: {cnpj_basico_ordem}-{cnpj_dv}')
+                            empresas_sem_estabelecimento = empresas_sem_estabelecimento + 1
+                    # Adiciona o dicionário à lista de objetos a serem inseridos em batch
                     lista_resposta_cnpj.append(list(resposta_cnpj.values()))
                 # Salva os registros da fatia em batch no banco
                 batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
+                print(f'{empresas_sem_estabelecimento} Registros processados de empresas que não possuem informações sobre estabelecimento')
             else:
                 lista_cnpj = None
             offset = offset + block_size
