@@ -108,6 +108,7 @@ def download_file(url: str, retry: bool=False):
         if remote_file_size:
             print(f'Tamanho do novo arquivo [remoto]: {remote_file_size} bytes')
             # Caso exista arquivo anterior, calcular checksum e comparar
+            print(f'Arquivo a verificar: {file_path}')
             if local_file_exists(file_path):
                 local_file_size = str(os.path.getsize(file_path))
                 if local_file_size:
@@ -118,6 +119,7 @@ def download_file(url: str, retry: bool=False):
                     remote_file_hash = generate_sha256_checksum(file_name, remote_file_size)
                     # Arquivos com tamanhos diferentes, houve alguma mudança nos arquivos. Substitui o velho pelo novo.
                     if local_file_hash != remote_file_hash:
+                        print('O arquivo local em disco e o arquivo remoto tem tamanhos diferentes. Remove o arquivo local e baixa do servidor.')
                         # Remove o arquivo antigo
                         try:
                             os.remove(file_path)
