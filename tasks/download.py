@@ -29,8 +29,8 @@ def download_datasets():
 
 # Método que varre a página html que contém a lista de arquivos .zip com o dump do banco de dados de CNPJs da Receita Federal, retornando uma lista com os resultados
 def get_datasets_urls():
-    #response = requests.get("https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj")
-    response = requests.get("http://200.152.38.155/CNPJ/")
+    response = requests.get("https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj")
+    # response = requests.get("http://200.152.38.155/CNPJ/")
     page = Selector(response.text)
     datasets_urls = page.xpath("//a[contains(@href, '.zip')]/@href").getall()
     datasets_urls = map(remove_malformed_http, datasets_urls)
