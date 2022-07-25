@@ -21,15 +21,15 @@ import os
 
 # Mapeamento  entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
 mapeamento_tabelas_zip = {
-    "empresa": "EMPRE",
-    "estabelecimento": "ESTABELE",
-    "simples": "SIMPLES",
-    "socio": "SOCIO",
-    "pais": "PAIS",
-    "municipio": "MUNIC",
-    "qualificacao_socio": "QUALS",
-    "natureza_juridica": "NATJU",
-    "cnae": "CNAE",
+    "empresa": "Empresas",
+    "estabelecimento": "Estabelecimentos",
+    "simples": "Simples",
+    "socio": "Socios",
+    "pais": "Paises",
+    "municipio": "Municipios",
+    "qualificacao_socio": "Qualificacoes",
+    "natureza_juridica": "Naturezas",
+    "cnae": "Cnaes",
 }
 
 # Mapeamento campos por [índice] .csv estabelecimento → nome dos campos tabela BD
