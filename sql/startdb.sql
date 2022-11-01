@@ -3,31 +3,6 @@
 -- Para executar via linha de comando shell/bash:
 	-- psql -U postgres -d qd_receita -h localhost -f caminho/nomedoarquivo.sql
 
--- Gerenciar as operações relativas às Empresas (CNPJ)
-drop table if exists empresa;
-create table empresa (
-	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (OITO PRIMEIROS DÍGITOS DO CNPJ).
-	cnpj VARCHAR(15) PRIMARY KEY,
-	-- NOME EMPRESARIAL DA PESSOA JURÍDICA
-	razao_social VARCHAR,
-	-- CÓDIGO DA NATUREZA JURÍDICA
-	codigo_natureza_juridica VARCHAR(4),
-	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
-	qualificacao_do_responsavel VARCHAR(2),
-	-- CAPITAL SOCIAL DA EMPRESA
-	capital_social VARCHAR,
-	-- CÓDIGO DO PORTE DA EMPRESA:
-		-- 00 - NÃO INFORMADO
-		-- 01 - MICRO EMPRESA
-		-- 03 - EMPRESA DE PEQUENO PORTE
-		-- 05 - DEMAIS
-	porte VARCHAR,
-	-- O ENTE FEDERATIVO RESPONSÁVEL É PREENCHIDO PARA OS CASOS DE ÓRGÃOS E ENTIDADES DO GRUPO DE NATUREZA JURÍDICA.
-	-- PARA AS DEMAIS NATUREZAS, ESTE ATRIBUTO FICA EM BRANCO.
-	-- OBS.: Corresponde ao par cidade - uf
-	ente_federativo_responsavel VARCHAR
-);
-
 -- Gerenciar as operações relativas aos Estabelecimentos (CNPJ)
 drop table if exists estabelecimento;
 create table estabelecimento (
@@ -38,6 +13,8 @@ create table estabelecimento (
 	cnpj_ordem VARCHAR(4),
 	-- DÍGITO VERIFICADOR DO NÚMERO DE INSCRIÇÃO NO CNPJ (DOIS ÚLTIMOS DÍGITOS DO CNPJ).
 	cnpj_dv VARCHAR(2),
+	-- Chave primária é uma combinação das três colunas anteriores
+	UNIQUE(cnpj_basico, cnpj_ordem, cnpj_dv),
 	-- CÓDIGO DO IDENTIFICADOR MATRIZ/FILIAL:
 		-- 1 - MATRIZ
 		-- 2 - FILIAL
@@ -99,6 +76,32 @@ create table estabelecimento (
 	situacao_especial VARCHAR,
 	-- DATA EM QUE A EMPRESA ENTROU EM SITUAÇÃO ESPECIAL
 	data_situacao_especial VARCHAR(10)
+);
+
+
+-- Gerenciar as operações relativas às Empresas (CNPJ)
+drop table if exists empresa;
+create table empresa (
+	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (OITO PRIMEIROS DÍGITOS DO CNPJ).
+	cnpj VARCHAR(8),
+	-- NOME EMPRESARIAL DA PESSOA JURÍDICA
+	razao_social VARCHAR,
+	-- CÓDIGO DA NATUREZA JURÍDICA
+	codigo_natureza_juridica VARCHAR(4),
+	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
+	qualificacao_do_responsavel VARCHAR(2),
+	-- CAPITAL SOCIAL DA EMPRESA
+	capital_social VARCHAR,
+	-- CÓDIGO DO PORTE DA EMPRESA:
+		-- 00 - NÃO INFORMADO
+		-- 01 - MICRO EMPRESA
+		-- 03 - EMPRESA DE PEQUENO PORTE
+		-- 05 - DEMAIS
+	porte VARCHAR,
+	-- O ENTE FEDERATIVO RESPONSÁVEL É PREENCHIDO PARA OS CASOS DE ÓRGÃOS E ENTIDADES DO GRUPO DE NATUREZA JURÍDICA.
+	-- PARA AS DEMAIS NATUREZAS, ESTE ATRIBUTO FICA EM BRANCO.
+	-- OBS.: Corresponde ao par cidade - uf
+	ente_federativo_responsavel VARCHAR
 );
 
 -- Gerenciar os Dados do Simples Nacional
