@@ -14,15 +14,15 @@ def get_n_total_cnpj(cursor=None):
             return results[0]["count_cnpj"]
 
 
-# Retorna um objeto com a resposta do banco
+# Retorna um objeto com a resposta do banco para a consulta da lista de cnpjs da tabela de estabelecimentos, que estabelece uma relação de 1..1 com a tabela resposta_cnpj
 def get_all_cnpj_ids(cursor=None, offset=0, limit=10000):
     print(f"Offset: {offset} | Limit: {limit}")
     # Quando não tem limite, deve retornar tudo, portanto na consulta sem limites, deve ser omitido o parâmetro
     if limit == 0:
-        sql = f"SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj offset {offset}"
+        sql = f"SELECT cnpj_basico, cnpj_ordem, cnpj_dv from estabelecimento order by cnpj_basico offset {offset}"
     # Executa uma consulta para pegar todos os identificadores únicos de CNPJ que serão utilizados nas buscas:
     else:
-        sql = f"SELECT empresa.cnpj as empresa_cnpj from empresa order by cnpj limit {limit} offset {offset}"
+        sql = f"SELECT cnpj_basico, cnpj_ordem, cnpj_dv from estabelecimento order by cnpj_basico limit {limit} offset {offset}"
     if cursor is not None and sql is not None:
         cursor.execute(sql)
         results = cursor.fetchall()
@@ -257,7 +257,7 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
 
 
 # Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento
-def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
+def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cnpj_ordem: str, cnpj_dv: str, cursor=None):
 
     # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
     sql = "SELECT estabelecimento.cnpj_basico as estabelecimento_cnpj_basico,"
@@ -320,13 +320,14 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
         + " estabelecimento.data_situacao_especial as estabelecimento_data_situacao_especial"
     )
     sql = sql + " FROM estabelecimento"
-    sql = sql + f" WHERE estabelecimento.cnpj_basico =  '{cnpj_basico}';"
+    sql = sql + f" WHERE estabelecimento.cnpj_basico='{cnpj_basico}' AND estabelecimento.cnpj_ordem ='{cnpj_ordem}' AND estabelecimento.cnpj_dv='{cnpj_dv}';"
 
     if cursor is not None:
         cursor.execute(sql)
         results = cursor.fetchall()
         # Armazena os campos a serem salvos na tabela de resposta_cnpj
         resposta_cnpj = {}
+        # Objeto auxiliar recebe uma cópia dos campos do resultado da consulta executada no banco
         campos_cnpj = {}
         if results is not None and results != []:
             r = results[0]
@@ -339,6 +340,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             estabelecimento_cnpj_ordem = campos_cnpj["estabelecimento_cnpj_ordem"]
             if estabelecimento_cnpj_ordem is not None:
                 while len(estabelecimento_cnpj_ordem) < 4:
+                    print('Remoção de zeros à esquerda e garantia da corretude do campo ORDEM do CNPJ')
                     estabelecimento_cnpj_ordem = "0" + estabelecimento_cnpj_ordem
                 resposta_cnpj["estabelecimento_cnpj_ordem"] = estabelecimento_cnpj_ordem
             else:
@@ -348,12 +350,13 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
                 "estabelecimento_cnpj_dv"
             ]
 
-            # Implement select from dim_matriz_filial
+            # Busca informações da tabela dim_matriz_filial
             identificador_matriz_filial = str(
                 campos_cnpj["estabelecimento_identificador_matriz_filial"]
             )
+
             if identificador_matriz_filial != "":
-                # SQL a ser realizada para buscar as informações do país
+                # SQL a ser realizada para buscar as informações sobre matriz e filial
                 sql = f"select * from dim_matriz_filial where codigo = '{identificador_matriz_filial}'"
                 cursor.execute(sql)
                 results = cursor.fetchall()
@@ -380,6 +383,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             else:
                 resposta_cnpj["estabelecimento_identificador_matriz_filial"] = None
 
+            # Nome fantasia do estabelecimento
             estabelecimento_nome_fantasia = str(
                 campos_cnpj["estabelecimento_nome_fantasia"]
             )
@@ -396,7 +400,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             else:
                 resposta_cnpj["estabelecimento_nome_fantasia"] = None
 
-            # Implement select from dim_situacao_cadastral
+            # Busca informações sobre a dim_situacao_cadastral
             situacao_cadastral = str(campos_cnpj["estabelecimento_situacao_cadastral"])
             if situacao_cadastral != "":
                 sql = f"select * from dim_situacao_cadastral where codigo = '{situacao_cadastral}'"
@@ -449,6 +453,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
                 campos_cnpj["estabelecimento_motivo_situacao_cadastral"]
             )
 
+            # Nome da cidade no exterior, caso se aplique
             estabelecimento_nome_cidade_exterior = campos_cnpj[
                 "estabelecimento_nome_cidade_exterior"
             ]
@@ -470,6 +475,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             else:
                 resposta_cnpj["estabelecimento_nome_cidade_exterior"] = None
 
+            # Data de início da atividade empresarial
             estabelecimento_data_inicio_atividade = campos_cnpj[
                 "estabelecimento_data_inicio_atividade"
             ]
@@ -516,17 +522,22 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             else:
                 resposta_cnpj["estabelecimento_cnae_fiscal_secundario"] = None
 
+            # Descrição do tipo de logradouro
             resposta_cnpj["estabelecimento_tipo_logradouro"] = campos_cnpj[
                 "estabelecimento_tipo_logradouro"
             ]
 
+            # Descrição do logradouro
             resposta_cnpj["estabelecimento_logradouro"] = remove_breaks(
                 str(campos_cnpj["estabelecimento_logradouro"]).replace("'", "`")
             )
+
+            # Definição do número do logradouro
             resposta_cnpj["estabelecimento_numero"] = remove_breaks(
                 str(campos_cnpj["estabelecimento_numero"]).replace("'", "")
             )
 
+            # Descrição textual complementar do endereço
             estabelecimento_complemento = str(
                 campos_cnpj["estabelecimento_complemento"]
             )
@@ -545,11 +556,12 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             else:
                 resposta_cnpj["estabelecimento_complemento"] = None
 
+            # Bairro do logradouro
             resposta_cnpj["estabelecimento_bairro"] = remove_breaks(
                 str(campos_cnpj["estabelecimento_bairro"]).replace("'", "`")
             )
 
-            # Corrigindo a formatação do CEP
+            # CEP do logradouro
             cep = campos_cnpj["estabelecimento_cep"]
             if cep is not None:
                 # Remove o ponto
@@ -566,7 +578,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
                 campos_cnpj["estabelecimento_uf"]
             )
 
-            # Tratando campos de telefone
+            # Telefone
             estabelecimento_ddd_telefone_1 = remove_breaks(
                 str(campos_cnpj["estabelecimento_ddd_1"])[:-2]
                 + str(campos_cnpj["estabelecimento_telefone_1"])
@@ -606,6 +618,9 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             resposta_cnpj[
                 "estabelecimento_ddd_telefone_fax"
             ] = estabelecimento_ddd_telefone_fax
+
+
+            # Correio Eletrônico
             estabelecimento_correio_eletronico = remove_breaks(
                 str(campos_cnpj["estabelecimento_correio_eletronico"])
             )
@@ -624,6 +639,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
                 "estabelecimento_correio_eletronico"
             ] = estabelecimento_correio_eletronico
 
+            # Situação especial
             estabelecimento_situacao_especial = campos_cnpj[
                 "estabelecimento_situacao_especial"
             ]
@@ -653,7 +669,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
                 "estabelecimento_data_situacao_especial"
             ] = estabelecimento_data_situacao_especial
 
-            # Realizar a consulta complementar para o cnae
+            # Consulta complementar para dados do CNAE
             cnae_codigo = remove_breaks(str(campos_cnpj["estabelecimento_cnae_fiscal"]))
             if cnae_codigo != "":
                 # SQL a ser realizada para buscar as informações do país
@@ -678,7 +694,8 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             else:
                 resposta_cnpj["cnae"] = None
 
-            # Realizar consulta à tabela país, caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
+            # Consulta à tabela País.
+            # Caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
             pais_codigo = campos_cnpj["estabelecimento_pais"]
             if pais_codigo is not None:
                 pais_codigo = remove_breaks(pais_codigo)
@@ -714,7 +731,7 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cursor=None):
             else:
                 resposta_cnpj["pais"] = None
 
-            # Realizar consulta para busca do município:
+            # Consulta para busca do município:
             municipio_codigo = str(campos_cnpj["estabelecimento_municipio"])
             if municipio_codigo != "" and "None" not in municipio_codigo:
                 sql_municipio = (
@@ -1002,13 +1019,14 @@ def processa_cnpj_socios(offset, block_size):
     while offset < n_total_cnpjs:
         lista_resposta_cnpj = []
         # Pega uma lista de cnpjs da fatia
+        # TODO mudando de empresa para estabelecimento
         lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
         for cnpj in lista_cnpj:
-            resposta_cnpj = process_resposta_cnpjs(cnpj["empresa_cnpj"], cursor)
+            resposta_cnpj = process_resposta_cnpjs(cnpj["cnpj_basico"], cnpj["cnpj_ordem"], cnpj["cnpj_dv"], cursor)
             if resposta_cnpj is not None:
                 lista_resposta_cnpj.append(list(resposta_cnpj.values()))
             # O processamento da resposta_socios para o CNPJ chama internamente o método de inserção em batch para inserir de uma vez todos os sócios relacionados ao CNPJ
-            process_resposta_socios(cnpj["empresa_cnpj"], cursor)
+            process_resposta_socios(cnpj["cnpj_basico"], cursor)
         # Incrementa o bloco
         offset = offset + block_size
 
@@ -1038,7 +1056,7 @@ def calculate_cnpj_dv_digit(cnpj_without_dv: str, first_digit: str = "") -> str:
 
 if __name__ == "__main__":
     # Estabelece conexão com o BD
-    conn = conecta("change here")
+    conn = conecta("change PWD here")
     if conn is not None:
         cursor = conn.cursor()
         offset = 0
@@ -1051,49 +1069,39 @@ if __name__ == "__main__":
             lista_resposta_cnpj = []
             empresas_sem_estabelecimento = 0
             if len(lista_cnpj) > 0:
+                # Para cada cnpj, espera-se que sejam retornados N estabelecimentos, sempre com apenas 1 empresa cada. Para cada estabelecimento, deve ser agregada a informação de ambos e persistida na tabela resposta_cnpj
                 for cnpj in lista_cnpj:
-                    # Dicionário com os campos a serem salvos
+                    print(f'* Processando dados para o CNPJ {cnpj}')
+                    # Dicionário com os campos a serem salvos e consolidados na tabela resposta_cnpj
                     resposta_cnpj = None
+
+                    # Empresa relacionada ao CNPJ:
                     resposta_cnpjs_empresa = process_resposta_cnpjs_empresa(
-                        cnpj["empresa_cnpj"], cursor
+                        cnpj["cnpj_basico"], cursor
                     )
+
+                    # Objetos estabelecimento relacionados a este CNPJ:
                     resposta_cnpjs_estabelecimento = (
                         process_resposta_cnpjs_estabelecimento(
-                            cnpj["empresa_cnpj"], cursor
+                            cnpj["cnpj_basico"], cnpj["cnpj_ordem"], cnpj["cnpj_dv"], cursor
                         )
                     )
+
                     # Processa lista de sócios para o dado cnpj
-                    process_resposta_socios(cnpj["empresa_cnpj"], cursor)
+                    process_resposta_socios(cnpj["cnpj_basico"], cursor)
+
                     # Caso hajam dados de estabelecimento, unifica o documento
+                    # TODO: Ajustando para a lógica de consolidação da resposta_cnpj a partir da tabela estabelecimento
                     if resposta_cnpjs_estabelecimento is not None:
+                        # Aqui é unificada em um único objeto resposta_cnpj a informação do estabelecimento com a informação da empresa
                         resposta_cnpj = dict(
                             resposta_cnpjs_empresa, **resposta_cnpjs_estabelecimento
                         )
-                    # Caso contrário, apenas os dados de empresa serão utilizados, necessário 1) passar dados de estabelecimento em branco no dicionário 2) Definir cnpj_ordem e calcular dv
-                    else:
-                        resposta_cnpj = set_estabelecimento_blank(
-                            resposta_cnpjs_empresa
-                        )
-                        # Aqui se está supondo que a empresa possui apenas um estabelecimento, a matriz, portanto cuja ordem será 0001, com dv calculado a partir do método de criação de um dv
-                        resposta_cnpj["estabelecimento_cnpj_ordem"] = "0001"
-                        cnpj_basico_ordem = (
-                            resposta_cnpj["estabelecimento_cnpj_basico"]
-                            + resposta_cnpj["estabelecimento_cnpj_ordem"]
-                        )
-                        cnpj_dv = generate_cnpj_dv(cnpj_basico_ordem)
-                        if cnpj_dv:
-                            resposta_cnpj["estabelecimento_cnpj_dv"] = cnpj_dv
-                            # print(f'cnpj completo criado para a empresa sem estabelecimento: {cnpj_basico_ordem}-{cnpj_dv}')
-                            empresas_sem_estabelecimento = (
-                                empresas_sem_estabelecimento + 1
-                            )
                     # Adiciona o dicionário à lista de objetos a serem inseridos em batch
                     lista_resposta_cnpj.append(list(resposta_cnpj.values()))
-                # Salva os registros da fatia em batch no banco
+                # Persiste os registros da fatia em batch no banco
                 batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
-                print(
-                    f"{empresas_sem_estabelecimento} Registros processados de empresas que não possuem informações sobre estabelecimento"
-                )
+
             else:
                 lista_cnpj = None
             offset = offset + block_size

@@ -285,7 +285,7 @@ def ingest_datasets():
     sql_engine = None
     try:
         # Remember to set here
-        db_password = "postgres"
+        db_password = "change PWD here"
         # Adding pass to the connection string
         db_url = f"postgresql://postgres:{db_password}@localhost:5432/qd_receita"
         sql_engine = create_engine(db_url, isolation_level="AUTOCOMMIT")
