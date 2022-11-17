@@ -40,7 +40,7 @@ def batch_insert_resposta_cnpj(cursor, resposta_cnpj_lista_valores):
     if cursor is not None and resposta_cnpj_lista_valores is not None:
         try:
             extras.execute_batch(cursor, sql_insert, resposta_cnpj_lista_valores)
-            print(f"Batch insert executado salvou {len(resposta_cnpj_lista_valores)}")
+            print(f"Batch insert executado salvou {len(resposta_cnpj_lista_valores)} itens")
         except Exception as e:
             print("Erro de inserção batch: " + str(e))
 
@@ -1091,14 +1091,11 @@ if __name__ == "__main__":
                     process_resposta_socios(cnpj["cnpj_basico"], cursor)
 
                     # Caso hajam dados de estabelecimento, unifica o documento
-                    # TODO: Ajustando para a lógica de consolidação da resposta_cnpj a partir da tabela estabelecimento
                     if resposta_cnpjs_estabelecimento is not None:
                         # Aqui é unificada em um único objeto resposta_cnpj a informação do estabelecimento com a informação da empresa
-                        resposta_cnpj = dict(
-                            resposta_cnpjs_empresa, **resposta_cnpjs_estabelecimento
-                        )
-                    # Adiciona o dicionário à lista de objetos a serem inseridos em batch
-                    lista_resposta_cnpj.append(list(resposta_cnpj.values()))
+                        resposta_cnpj = {**resposta_cnpjs_empresa, **resposta_cnpjs_estabelecimento}
+                        # Adiciona o dicionário à lista de objetos a serem inseridos em batch
+                        lista_resposta_cnpj.append(list(resposta_cnpj.values()))
                 # Persiste os registros da fatia em batch no banco
                 batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
 
