@@ -40,7 +40,9 @@ def batch_insert_resposta_cnpj(cursor, resposta_cnpj_lista_valores):
     if cursor is not None and resposta_cnpj_lista_valores is not None:
         try:
             extras.execute_batch(cursor, sql_insert, resposta_cnpj_lista_valores)
-            print(f"Batch insert executado salvou {len(resposta_cnpj_lista_valores)} itens")
+            print(
+                f"Batch insert executado salvou {len(resposta_cnpj_lista_valores)} itens"
+            )
         except Exception as e:
             print("Erro de inserção batch: " + str(e))
 
@@ -257,7 +259,9 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
 
 
 # Processar a partir de um CNPJ as tabelas relacionadas ao estabelecimento
-def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cnpj_ordem: str, cnpj_dv: str, cursor=None):
+def process_resposta_cnpjs_estabelecimento(
+    cnpj_basico: str, cnpj_ordem: str, cnpj_dv: str, cursor=None
+):
 
     # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
     sql = "SELECT estabelecimento.cnpj_basico as estabelecimento_cnpj_basico,"
@@ -320,7 +324,10 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cnpj_ordem: str, cn
         + " estabelecimento.data_situacao_especial as estabelecimento_data_situacao_especial"
     )
     sql = sql + " FROM estabelecimento"
-    sql = sql + f" WHERE estabelecimento.cnpj_basico='{cnpj_basico}' AND estabelecimento.cnpj_ordem ='{cnpj_ordem}' AND estabelecimento.cnpj_dv='{cnpj_dv}';"
+    sql = (
+        sql
+        + f" WHERE estabelecimento.cnpj_basico='{cnpj_basico}' AND estabelecimento.cnpj_ordem ='{cnpj_ordem}' AND estabelecimento.cnpj_dv='{cnpj_dv}';"
+    )
 
     if cursor is not None:
         cursor.execute(sql)
@@ -340,7 +347,9 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cnpj_ordem: str, cn
             estabelecimento_cnpj_ordem = campos_cnpj["estabelecimento_cnpj_ordem"]
             if estabelecimento_cnpj_ordem is not None:
                 while len(estabelecimento_cnpj_ordem) < 4:
-                    print('Remoção de zeros à esquerda e garantia da corretude do campo ORDEM do CNPJ')
+                    print(
+                        "Remoção de zeros à esquerda e garantia da corretude do campo ORDEM do CNPJ"
+                    )
                     estabelecimento_cnpj_ordem = "0" + estabelecimento_cnpj_ordem
                 resposta_cnpj["estabelecimento_cnpj_ordem"] = estabelecimento_cnpj_ordem
             else:
@@ -578,66 +587,73 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cnpj_ordem: str, cn
                 campos_cnpj["estabelecimento_uf"]
             )
 
-            # Telefone
-            estabelecimento_ddd_telefone_1 = remove_breaks(
-                str(campos_cnpj["estabelecimento_ddd_1"])[:-2]
-                + str(campos_cnpj["estabelecimento_telefone_1"])
-            )
-            if (
-                "None" in estabelecimento_ddd_telefone_1
-                or estabelecimento_ddd_telefone_1 == ""
-            ):
+            # Telefone 1
+            estabelecimento_ddd_1 = campos_cnpj["estabelecimento_ddd_1"]
+            estabelecimento_telefone_1 = campos_cnpj["estabelecimento_telefone_1"]
+            if estabelecimento_ddd_1 and estabelecimento_telefone_1:
+                estabelecimento_ddd_telefone_1 = (
+                    estabelecimento_ddd_1 + estabelecimento_telefone_1
+                )
+                estabelecimento_ddd_telefone_1 = remove_breaks(
+                    estabelecimento_ddd_telefone_1
+                )
+            else:
                 estabelecimento_ddd_telefone_1 = None
             resposta_cnpj[
                 "estabelecimento_ddd_telefone_1"
             ] = estabelecimento_ddd_telefone_1
 
-            estabelecimento_ddd_telefone_2 = remove_breaks(
-                str(campos_cnpj["estabelecimento_ddd_2"])[:-2]
-                + str(campos_cnpj["estabelecimento_telefone_2"])
-            )
-            if (
-                "None" in estabelecimento_ddd_telefone_2
-                or estabelecimento_ddd_telefone_2 == ""
-            ):
+            # Telefone 2
+            estabelecimento_ddd_2 = campos_cnpj["estabelecimento_ddd_2"]
+            estabelecimento_telefone_2 = campos_cnpj["estabelecimento_telefone_2"]
+            if estabelecimento_ddd_2 and estabelecimento_telefone_2:
+                estabelecimento_ddd_telefone_2 = (
+                    estabelecimento_ddd_2 + estabelecimento_telefone_2
+                )
+                estabelecimento_ddd_telefone_2 = remove_breaks(
+                    estabelecimento_ddd_telefone_2
+                )
+            else:
                 estabelecimento_ddd_telefone_2 = None
             resposta_cnpj[
                 "estabelecimento_ddd_telefone_2"
             ] = estabelecimento_ddd_telefone_2
 
-            estabelecimento_ddd_telefone_fax = remove_breaks(
-                str(campos_cnpj["estabelecimento_ddd_fax"])[:-2]
-                + str(campos_cnpj["estabelecimento_telefone_fax"])
-            )
-            if (
-                "None" in estabelecimento_ddd_telefone_fax
-                or estabelecimento_ddd_telefone_fax == ""
-            ):
+            # Fax
+            estabelecimento_ddd_fax = campos_cnpj["estabelecimento_ddd_fax"]
+            estabelecimento_telefone_fax = campos_cnpj["estabelecimento_telefone_fax"]
+            if estabelecimento_ddd_fax and estabelecimento_telefone_fax:
+                estabelecimento_ddd_telefone_fax = (
+                    estabelecimento_ddd_fax
+                ) = estabelecimento_telefone_fax
+                estabelecimento_ddd_telefone_fax = remove_breaks(
+                    estabelecimento_ddd_telefone_fax
+                )
+            else:
                 estabelecimento_ddd_telefone_fax = None
-
             resposta_cnpj[
                 "estabelecimento_ddd_telefone_fax"
             ] = estabelecimento_ddd_telefone_fax
 
-
             # Correio Eletrônico
-            estabelecimento_correio_eletronico = remove_breaks(
-                str(campos_cnpj["estabelecimento_correio_eletronico"])
+            estabelecimento_correio_eletronico = str(
+                campos_cnpj["estabelecimento_correio_eletronico"]
             )
-            estabelecimento_correio_eletronico = (
-                estabelecimento_correio_eletronico.replace('"', "")
-            )
-            estabelecimento_correio_eletronico = (
-                estabelecimento_correio_eletronico.replace("'", "")
-            )
-            if (
-                "None" in estabelecimento_correio_eletronico
-                or estabelecimento_correio_eletronico == ""
-            ):
-                estabelecimento_correio_eletronico = None
-            resposta_cnpj[
-                "estabelecimento_correio_eletronico"
-            ] = estabelecimento_correio_eletronico
+            if estabelecimento_correio_eletronico:
+                estabelecimento_correio_eletronico = remove_breaks(
+                    estabelecimento_correio_eletronico
+                )
+                estabelecimento_correio_eletronico = (
+                    estabelecimento_correio_eletronico.replace('"', "")
+                )
+                estabelecimento_correio_eletronico = (
+                    estabelecimento_correio_eletronico.replace("'", "")
+                )
+                resposta_cnpj[
+                    "estabelecimento_correio_eletronico"
+                ] = estabelecimento_correio_eletronico
+            else:
+                resposta_cnpj["estabelecimento_correio_eletronico"] = None
 
             # Situação especial
             estabelecimento_situacao_especial = campos_cnpj[
@@ -697,39 +713,40 @@ def process_resposta_cnpjs_estabelecimento(cnpj_basico: str, cnpj_ordem: str, cn
             # Consulta à tabela País.
             # Caso o código do país não seja None, evitando cancelamento da query em INNER JOIN com pais com codigo None
             pais_codigo = campos_cnpj["estabelecimento_pais"]
-            if pais_codigo is not None:
-                pais_codigo = remove_breaks(pais_codigo)
-                print(f"pais_codigo: {pais_codigo}")
-                if pais_codigo != "":
-                    # Brasil
-                    if "None" in pais_codigo:
-                        pais_codigo = "105"
-                    if ".0" in pais_codigo:
-                        # Remove '.0'
-                        pais_codigo = pais_codigo[:-2]
-                    # Completa com zeros à esquerda até o número ficar com 3 dígitos
-                    while len(pais_codigo) < 3:
-                        pais_codigo = "0" + pais_codigo
-                    # SQL a ser realizada para buscar as informações do país
-                    sql_pais = f"select * from pais where codigo = '{pais_codigo}'"
-                    cursor.execute(sql_pais)
-                    results = cursor.fetchall()
-                    if results is not None and results != []:
-                        # Should be a single result, fetch first item
-                        campos_pais = results[0]
-                        if campos_pais is not None:
-                            pais_descricao = str(campos_pais["descricao"])
-                            pais_cod_desc = f"{pais_codigo} - {pais_descricao}"
-                        else:
-                            pais_cod_desc = pais_cod
-                        resposta_cnpj["pais"] = f"{pais_cod_desc}"
-                    else:
-                        print(f"Erro! País {pais_codigo} não encontrado")
-                        resposta_cnpj["pais"] = str(campos_cnpj["estabelecimento_pais"])
+            # Brasil está vindo como vazio, então será explicitamente adicionado o código 105
+            if pais_codigo is None:
+                pais_codigo = "105"
+
+            pais_codigo = remove_breaks(pais_codigo)
+            pais_codigo = pais_codigo.strip()
+
+            # Talvez não seja mais necessário
+            if (pais_codigo == "") or ("None" in pais_codigo):
+                pais_codigo = "105"
+
+            if ".0" in pais_codigo:
+                # Remove '.0'
+                pais_codigo = pais_codigo[:-2]
+            # Completa com zeros à esquerda até o número ficar com 3 dígitos
+            while len(pais_codigo) < 3:
+                pais_codigo = "0" + pais_codigo
+
+            # SQL a ser realizada para buscar as informações do país
+            sql_pais = f"select * from pais where codigo = '{pais_codigo}'"
+            cursor.execute(sql_pais)
+            results = cursor.fetchall()
+            if results is not None and results != []:
+                # Should be a single result, fetch first item
+                campos_pais = results[0]
+                if campos_pais is not None:
+                    pais_descricao = str(campos_pais["descricao"])
+                    pais_cod_desc = f"{pais_codigo} - {pais_descricao}"
                 else:
-                    resposta_cnpj["pais"] = None
+                    pais_cod_desc = pais_cod
+                resposta_cnpj["pais"] = f"{pais_cod_desc}"
             else:
-                resposta_cnpj["pais"] = None
+                print(f"Erro! País {pais_codigo} não encontrado")
+                resposta_cnpj["pais"] = str(campos_cnpj["estabelecimento_pais"])
 
             # Consulta para busca do município:
             municipio_codigo = str(campos_cnpj["estabelecimento_municipio"])
@@ -1022,7 +1039,9 @@ def processa_cnpj_socios(offset, block_size):
         # TODO mudando de empresa para estabelecimento
         lista_cnpj = get_all_cnpj_ids(cursor, offset, block_size)
         for cnpj in lista_cnpj:
-            resposta_cnpj = process_resposta_cnpjs(cnpj["cnpj_basico"], cnpj["cnpj_ordem"], cnpj["cnpj_dv"], cursor)
+            resposta_cnpj = process_resposta_cnpjs(
+                cnpj["cnpj_basico"], cnpj["cnpj_ordem"], cnpj["cnpj_dv"], cursor
+            )
             if resposta_cnpj is not None:
                 lista_resposta_cnpj.append(list(resposta_cnpj.values()))
             # O processamento da resposta_socios para o CNPJ chama internamente o método de inserção em batch para inserir de uma vez todos os sócios relacionados ao CNPJ
@@ -1071,7 +1090,7 @@ if __name__ == "__main__":
             if len(lista_cnpj) > 0:
                 # Para cada cnpj, espera-se que sejam retornados N estabelecimentos, sempre com apenas 1 empresa cada. Para cada estabelecimento, deve ser agregada a informação de ambos e persistida na tabela resposta_cnpj
                 for cnpj in lista_cnpj:
-                    print(f'* Processando dados para o CNPJ {cnpj}')
+                    print(f"* Processando dados para o CNPJ {cnpj}")
                     # Dicionário com os campos a serem salvos e consolidados na tabela resposta_cnpj
                     resposta_cnpj = None
 
@@ -1083,7 +1102,10 @@ if __name__ == "__main__":
                     # Objetos estabelecimento relacionados a este CNPJ:
                     resposta_cnpjs_estabelecimento = (
                         process_resposta_cnpjs_estabelecimento(
-                            cnpj["cnpj_basico"], cnpj["cnpj_ordem"], cnpj["cnpj_dv"], cursor
+                            cnpj["cnpj_basico"],
+                            cnpj["cnpj_ordem"],
+                            cnpj["cnpj_dv"],
+                            cursor,
                         )
                     )
 
@@ -1093,7 +1115,10 @@ if __name__ == "__main__":
                     # Caso hajam dados de estabelecimento, unifica o documento
                     if resposta_cnpjs_estabelecimento is not None:
                         # Aqui é unificada em um único objeto resposta_cnpj a informação do estabelecimento com a informação da empresa
-                        resposta_cnpj = {**resposta_cnpjs_empresa, **resposta_cnpjs_estabelecimento}
+                        resposta_cnpj = {
+                            **resposta_cnpjs_empresa,
+                            **resposta_cnpjs_estabelecimento,
+                        }
                         # Adiciona o dicionário à lista de objetos a serem inseridos em batch
                         lista_resposta_cnpj.append(list(resposta_cnpj.values()))
                 # Persiste os registros da fatia em batch no banco

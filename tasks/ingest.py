@@ -293,7 +293,6 @@ def ingest_datasets():
     except:
         print(f"Erro de conexão via SQLAlchemy: {sys.exc_info()}")
 
-
     # Para cada tabela/tema (ex.: socio, estabelecimento, cnae, empresa, etc.):
     # for chave in sorted(mapeamento_tabelas_zip.keys(), key=str.lower, reverse=False):
     for chave in [
@@ -304,9 +303,11 @@ def ingest_datasets():
         "cnae",
         "motivo",
         "estabelecimento",
-        "empresa"
+        "empresa",
     ]:
-        print(f"*{chave}* Carregando dados do CSV em memória e processando para a tabela no banco de dados...")
+        print(
+            f"*{chave}* Carregando dados do CSV em memória e processando para a tabela no banco de dados..."
+        )
         try:
 
             # Pegar lista de nomes de arquivos .zip relacionados à tabela
