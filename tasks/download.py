@@ -31,17 +31,18 @@ def download_datasets():
 
 # Método que varre a página html que contém a lista de arquivos .zip com o dump do banco de dados de CNPJs da Receita Federal, retornando uma lista com os resultados
 def get_datasets_urls():
-    response = requests.get(
-        "https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj"
-    )
-    # response = requests.get("http://200.152.38.155/CNPJ/")
+    # response = requests.get("https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/dados-publicos-cnpj")
+    response = requests.get("http://200.152.38.155/CNPJ/")
     page = Selector(response.text)
     datasets_urls = page.xpath("//a[contains(@href, '.zip')]/@href").getall()
-    datasets_urls = map(remove_malformed_http, datasets_urls)
+    # datasets_urls = map(remove_malformed_http, datasets_urls)
     # Transforma o map em lista simples
-    datasets_urls = list(datasets_urls)
-    return datasets_urls
-
+    # datasets_urls = list(datasets_urls)
+    full_urls = []
+    for url in datasets_urls:
+        full_urls.append("http://200.152.38.155/CNPJ/" + url)
+    print(full_urls)
+    return full_urls
 
 def remove_malformed_http(url: str):
     return re.sub(r"http//", "", url)
@@ -117,18 +118,18 @@ def download_file(url: str, retry: bool = False):
         info = requests.head(url)
     except Exception as e:
         print(f"→ Erro de verificação preventiva de metadados do arquivo {file_name}.")
-    # Arquivo já existe no disco
+    # Conseguiu a informação sobre o arquivo remoteo
     if info:
         remote_file_size = info.headers["Content-Length"]
         if remote_file_size:
-            print(f"Tamanho do novo arquivo [remoto]: {remote_file_size} bytes")
+            print(f"Tamanho do arquivo remoto: {remote_file_size} bytes")
             # Caso exista arquivo anterior, calcular checksum e comparar
-            print(f"Arquivo a verificar: {file_path}")
+            print(f"Arquivo a verificar em disco: {file_path}")
             if local_file_exists(file_path):
                 local_file_size = str(os.path.getsize(file_path))
                 if local_file_size:
                     print(
-                        f"Tamanho do arquivo anterior [disco]: {remote_file_size} bytes"
+                        f"Tamanho do arquivo em disco: {remote_file_size} bytes"
                     )
                     # Para garantir a integridade entre cargas, será implementada uma verificação do tamanho do arquivo remoto
                     # contra o arquivo baixado anteriormente, ainda em disco, através do checksum
@@ -138,10 +139,11 @@ def download_file(url: str, retry: bool = False):
                     remote_file_hash = generate_sha256_checksum(
                         file_name, remote_file_size
                     )
-                    # Arquivos com tamanhos diferentes, houve alguma mudança nos arquivos. Substitui o velho pelo novo.
+                    # Arquivos com tamanhos o nomes diferentes, houve alguma mudança nos arquivos. Substitui o velho pelo novo.
                     if local_file_hash != remote_file_hash:
+                        # TODO: Aqui, ao invés de deletar o antigo, vai armazenar o antigo em outro diretório no Spaces e manter o novo
                         print(
-                            "O arquivo local em disco e o arquivo remoto tem tamanhos diferentes. Remove o arquivo local e baixa do servidor."
+                            "O arquivo local em disco e o arquivo remoto tem tamanhos diferentes, ou mudaram de nome. Removendo o arquivo local e baixa do servidor."
                         )
                         # Remove o arquivo antigo
                         try:

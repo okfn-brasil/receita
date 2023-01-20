@@ -19,18 +19,32 @@ import io
 import csv
 import os
 
-# Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv e .zip
+# Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .zip
 mapeamento_tabelas_zip = {
-    "empresa": "EMPRECSV",  # "Empresas",
-    "estabelecimento": "ESTABELE",  # "Estabelecimentos",
+    "empresa": "Empresas",  # "Empresas",
+    "estabelecimento": "Estabelecimentos",  # "Estabelecimentos",
     "simples": "Simples",
     "socio": "Socios",
-    "pais": "PAISCSV",  # "Paises",
-    "municipio": "MUNICCSV",  # "Municipios",
-    "qualificacao_socio": "QUALSCSV",
-    "natureza_juridica": "NATJUCSV",  # "Naturezas",
-    "cnae": "CNAECSV",  # "Cnaes",
-    "motivo": "MOTICSV",
+    "pais": "Paises",  # "Paises",
+    "municipio": "Municipios",  # "Municipios",
+    "qualificacao_socio": "Qualificacoes",
+    "natureza_juridica": "Naturezas",  # "Naturezas",
+    "cnae": "Cnaes",  # "Cnaes",
+    "motivo": "Motivos",
+}
+
+# Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv
+mapeamento_tabelas_csv = {
+    "empresa": "EMPRECSV",  # "Empresas",
+    "estabelecimento": "ESTABELE",  # "Estabelecimentos",
+    "simples": "SIMPLES",
+    "socio": "SOCIOCSV",
+    "pais": "Paises",  # "Paises",
+    "municipio": "Municipios",  # "Municipios",
+    "qualificacao_socio": "Qualificacoes",
+    "natureza_juridica": "Naturezas",  # "Naturezas",
+    "cnae": "Cnaes",  # "Cnaes",
+    "motivo": "Motivos",
 }
 
 # Mapeamento campos por [índice] .csv estabelecimento → nome dos campos tabela BD
@@ -129,18 +143,64 @@ def pegar_lista_zip(nome_arquivo: str):
     # Retorna a lista completa de arquivos .zip da tabela
     return items_tabela
 
+# Recebe o nome do arquivo que deve ser um CSV e verifica extensão, presença de caracteres de escape e os remove, retornando uma string limpa sugerida para o arquivo .csv extraído do .zip
+def limpa_nome_csv(nome_arquivo: str):
+    if  "" in nome_arquivo:
+        nome_arquivo = nome_arquivo.replace(" ", "")
+    if  "$" in nome_arquivo:
+        nome_arquivo = nome_arquivo.replace("$", "")
+    if  "\'" in nome_arquivo:
+        nome_arquivo = nome_arquivo.replace("\'", "")
+    if ".csv" not in nome_arquivo:
+        nome_arquivo = nome_arquivo + ".csv"
+    return nome_arquivo
 
 # Descompactar um arquivo .zip da tabela a partir da string com referência completa ao diretório e nome do arquivo
 # Retorna True caso realize a descompressão com sucesso e False, caso contrário/
 def descomprimir_zip(caminho_nome_zip: str):
+    # Diretório onde estarão armazenados os dados .CSV após extraídos do .zip
+    dir_zip ="../data/"
+    # Diretório onde estarão armazenados os dados .CSV após extraídos do .zip
+    dir_csv ="../data/extracted/"
+    # Lista de arquivos extraídos de dentro do .zip
+    csv_extraidos = []
     try:
-        with ZipFile(caminho_nome_zip, "r") as arquivo:
-            # Extrair no mesmo diretório data
-            arquivo.extractall(path="../data/")
-            return True
+        print(f"Abrindo arquivo {caminho_nome_zip}:")
+        with ZipFile(caminho_nome_zip, "r") as arquivo_zip:
+            # Pega a lista de arquivos para verificar o nome do arquivo CSV
+            lista_arquivos = arquivo_zip.namelist()
+            for arquivo in lista_arquivos:
+                # Limpa e define o nome do arquivo .csv:
+                target_name = limpa_nome_csv(arquivo)
+                # Define o caminho completo para o arquivo após extraído
+                target_path = os.path.join(dir_csv, target_name)
+                # Criando arquivo .csv em disco para receber o que for extraído do .zip
+                with open(target_path, "wb") as f:  # open the output path for writing
+                    try:
+                        # carrega os bytes do arquivo em memória:
+                        arquivo_extraido_bytes = arquivo_zip.read(arquivo)
+                        try:
+                             # salva os bytes no arquivo .csv no caminho especificado
+                            f.write(arquivo_extraido_bytes)
+                            # Aqui adiciona o caminho completo pro arquivo .csv extraído que será novamente carregado em memória na próxima etapa usando Pandas
+                            csv_extraidos.append(target_path)
+                        except Exception as e:
+                            print("Erro de escrita do arquivo .csv")
+                            print(e)
+                    except Exception as g:
+                        print("Erro de extração do arquivo CSV do .zip")
+                        print(g)
+
+                print(f"Arquivo {arquivo} sendo extraído para {dir_csv}")
+                # Extrair no mesmo diretório data
+                # arquivo.extractall(path="../data/")
+
+                # TODO: talvez tenha que pegar o arquivo aqui pelo nome inicial e mudar o nome após extraído na pasta, com sistema de arquivos.
+            print(f"Arquivo {arquivo} extraído para {dir_csv} com suesso")
+            return csv_extraidos
     except:
         print(f"Erro de descompressão do arquivo {caminho_nome_zip}")
-    return False
+    return None
 
 
 # Realiza uma regra de três para calcular a porcentagem de andamento da carga dos dados
@@ -157,11 +217,16 @@ def status_carga(parcial: int, total: int):
 # A referência ao arquivo .csv é a string caminho_nome_arquivo, tabela é a chave da tabela em que será inserida
 # Retorna True caso a operação realize o registro dos dados no banco e False caso contrário
 def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
+    # Como poderiam vir vários arquivos dentro do .zip, recebemos uma lista, mas só nos interessa o primeiro (e único elemento) da lista
+    caminho_nome_arquivo = caminho_nome_arquivo[0]
+    print(f"Caminho do arquivo .csv a carregar em memória: {caminho_nome_arquivo}")
+    # Campos selecionados do csv (?)
     campos_selecionados = list(mapeamento_nome_campos[tabela].keys())
     tipos_selecionados = mapeamento_nome_campos[tabela]
     # resultado é o objeto a ser retornado com as contagens de registros carregar_dados
     resultado = {}
     try:
+        # Valores padrão estão configurados diretamente aqui
         read_chunk_size = 100_000
         write_chunk_size = 10_000
         # Total de items a serem carregados do arquivo csv
@@ -285,7 +350,7 @@ def ingest_datasets():
     sql_engine = None
     try:
         # Remember to set here
-        db_password = "change PWD here"
+        db_password = "change here"
         # Adding pass to the connection string
         db_url = f"postgresql://postgres:{db_password}@localhost:5432/qd_receita"
         sql_engine = create_engine(db_url, isolation_level="AUTOCOMMIT")
@@ -295,21 +360,11 @@ def ingest_datasets():
 
     # Para cada tabela/tema (ex.: socio, estabelecimento, cnae, empresa, etc.):
     # for chave in sorted(mapeamento_tabelas_zip.keys(), key=str.lower, reverse=False):
-    for chave in [
-        "municipio",
-        "pais",
-        "qualificacao_socio",
-        "natureza_juridica",
-        "cnae",
-        "motivo",
-        "estabelecimento",
-        "empresa",
-    ]:
+    for chave in mapeamento_tabelas_zip.keys():
         print(
             f"*{chave}* Carregando dados do CSV em memória e processando para a tabela no banco de dados..."
         )
         try:
-
             # Pegar lista de nomes de arquivos .zip relacionados à tabela
             lista_zip = pegar_lista_zip(mapeamento_tabelas_zip[chave])
             lista_zip = sorted(lista_zip, key=str.lower, reverse=False)
@@ -320,9 +375,11 @@ def ingest_datasets():
                 descomprimiu = False
                 try:
                     print(f"Descomprinindo arquivo {arquivo_zip}")
-                    descomprimiu = descomprimir_zip(f"../data/{arquivo_zip}")
-                except:
+                    arquivo_csv = descomprimir_zip(f"{arquivo_zip}")
+                    descomprimiu = True
+                except Exception as e:
                     print(f"Erro de descompressão do arquivo {arquivo_zip}")
+                    print(e)
                 if descomprimiu:
                     # Carregar o csv em memória
                     try:
@@ -330,8 +387,6 @@ def ingest_datasets():
                         print(
                             f"Arquivo {arquivo_zip} descomprimido com sucesso. Carregando CSV em memória para salvar registros na tabela do banco de dados..."
                         )
-                        # O arquivo .csv extraído tem o mesmo nome do zip sem a extensão. Adicionando o diretório de dados ao caminho relativo
-                        arquivo_csv = arquivo_zip.replace(".zip", "")
                         # Implementação multi-thread
                         t1 = time.time()
                         with ThreadPoolExecutor(max_workers=3) as processPool:
