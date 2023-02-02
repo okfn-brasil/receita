@@ -30,7 +30,7 @@ mapeamento_tabelas_zip = {
     "qualificacao_socio": "Qualificacoes",
     "natureza_juridica": "Naturezas",  # "Naturezas",
     "cnae": "Cnaes",  # "Cnaes",
-    "motivo": "Motivos",
+    "motivo": "Motivos", # "Motivos"
 }
 
 # Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv
@@ -39,12 +39,12 @@ mapeamento_tabelas_csv = {
     "estabelecimento": "ESTABELE",  # "Estabelecimentos",
     "simples": "SIMPLES",
     "socio": "SOCIOCSV",
-    "pais": "Paises",  # "Paises",
-    "municipio": "Municipios",  # "Municipios",
-    "qualificacao_socio": "Qualificacoes",
-    "natureza_juridica": "Naturezas",  # "Naturezas",
-    "cnae": "Cnaes",  # "Cnaes",
-    "motivo": "Motivos",
+    "pais": "PAISCSV",  # "Paises",
+    "municipio": "MUNICCSV",  # "Municipios",
+    "qualificacao_socio": "QUALSCSV",
+    "natureza_juridica": "NATJUCSV",  # "Naturezas",
+    "cnae": "CNAECSV",  # "Cnaes",
+    "motivo": "MOTICSV",
 }
 
 # Mapeamento campos por [índice] .csv estabelecimento → nome dos campos tabela BD
