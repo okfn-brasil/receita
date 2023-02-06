@@ -117,6 +117,7 @@ mapeamento_nome_campos = {
     "qualificacao_socio": {"codigo": "str", "descricao": "str"},
     "natureza_juridica": {"codigo": "str", "descricao": "str"},
     "cnae": {"codigo": "str", "descricao": "str"},
+    "motivo": {"codigo": "str", "descricao": "str"},
 }
 
 # Dicionário utilizado para armazenar a contagem de registros a carregar e os carregados
@@ -130,6 +131,7 @@ n_registros_carregados = {
     "qualificacao_socio": {"n_items_csv": None, "n_carregados": None},
     "natureza_juridica": {"n_items_csv": None, "n_carregados": None},
     "cnae": {"n_items_csv": None, "n_carregados": None},
+    "motivo": {"n_items_csv": None, "n_carregados": None},
 }
 
 # Pegar a lista de todos os nomes de arquivo .zip que tenham uma referência à string "nome_arquivo"

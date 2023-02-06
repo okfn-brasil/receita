@@ -199,7 +199,7 @@ insert into pais values ('873', 'Wake, Ilha');
 drop table if exists municipio;
 create table municipio (
 	-- CÓDIGO DO MUNICÍPIO
-	codigo VARCHAR(3),
+	codigo VARCHAR(4),
 	-- NOME DO MUNICÍPIO
 	descricao VARCHAR
 );
@@ -227,6 +227,15 @@ drop table if exists cnae;
 create table cnae (
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA
 	codigo VARCHAR(7),
+	-- NOME DA ATIVIDADE ECONÔMICA
+	descricao VARCHAR
+);
+
+-- Gerenciar as operações relativas aos Motivos da Situação cadastral das Empresas
+drop table if exists motivo;
+create table motivo (
+	-- CÓDIGO DA ATIVIDADE ECONÔMICA
+	codigo VARCHAR(3),
 	-- NOME DA ATIVIDADE ECONÔMICA
 	descricao VARCHAR
 );
