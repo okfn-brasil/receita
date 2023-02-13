@@ -18,6 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 import io
 import csv
 import os
+import logging
 
 # Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .zip
 mapeamento_tabelas_zip = {
@@ -30,7 +31,7 @@ mapeamento_tabelas_zip = {
     "qualificacao_socio": "Qualificacoes",
     "natureza_juridica": "Naturezas",  # "Naturezas",
     "cnae": "Cnaes",  # "Cnaes",
-    "motivo": "Motivos", # "Motivos"
+    "motivo": "Motivos",  # "Motivos"
 }
 
 # Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv
@@ -145,29 +146,31 @@ def pegar_lista_zip(nome_arquivo: str):
     # Retorna a lista completa de arquivos .zip da tabela
     return items_tabela
 
+
 # Recebe o nome do arquivo que deve ser um CSV e verifica extensão, presença de caracteres de escape e os remove, retornando uma string limpa sugerida para o arquivo .csv extraído do .zip
 def limpa_nome_csv(nome_arquivo: str):
-    if  "" in nome_arquivo:
+    if "" in nome_arquivo:
         nome_arquivo = nome_arquivo.replace(" ", "")
-    if  "$" in nome_arquivo:
+    if "$" in nome_arquivo:
         nome_arquivo = nome_arquivo.replace("$", "")
-    if  "\'" in nome_arquivo:
-        nome_arquivo = nome_arquivo.replace("\'", "")
+    if "'" in nome_arquivo:
+        nome_arquivo = nome_arquivo.replace("'", "")
     if ".csv" not in nome_arquivo:
         nome_arquivo = nome_arquivo + ".csv"
     return nome_arquivo
+
 
 # Descompactar um arquivo .zip da tabela a partir da string com referência completa ao diretório e nome do arquivo
 # Retorna True caso realize a descompressão com sucesso e False, caso contrário/
 def descomprimir_zip(caminho_nome_zip: str):
     # Diretório onde estarão armazenados os dados .CSV após extraídos do .zip
-    dir_zip ="../data/"
+    dir_zip = "../data/"
     # Diretório onde estarão armazenados os dados .CSV após extraídos do .zip
-    dir_csv ="../data/extracted/"
+    dir_csv = "../data/extracted/"
     # Lista de arquivos extraídos de dentro do .zip
     csv_extraidos = []
     try:
-        print(f"Abrindo arquivo {caminho_nome_zip}:")
+        logging.info(f"Abrindo arquivo {caminho_nome_zip}:")
         with ZipFile(caminho_nome_zip, "r") as arquivo_zip:
             # Pega a lista de arquivos para verificar o nome do arquivo CSV
             lista_arquivos = arquivo_zip.namelist()
@@ -182,7 +185,7 @@ def descomprimir_zip(caminho_nome_zip: str):
                         # carrega os bytes do arquivo em memória:
                         arquivo_extraido_bytes = arquivo_zip.read(arquivo)
                         try:
-                             # salva os bytes no arquivo .csv no caminho especificado
+                            # salva os bytes no arquivo .csv no caminho especificado
                             f.write(arquivo_extraido_bytes)
                             # Aqui adiciona o caminho completo pro arquivo .csv extraído que será novamente carregado em memória na próxima etapa usando Pandas
                             csv_extraidos.append(target_path)
@@ -190,18 +193,18 @@ def descomprimir_zip(caminho_nome_zip: str):
                             print("Erro de escrita do arquivo .csv")
                             print(e)
                     except Exception as g:
-                        print("Erro de extração do arquivo CSV do .zip")
-                        print(g)
+                        logging.error("Erro de extração do arquivo CSV do .zip")
+                        logging.error(g)
 
-                print(f"Arquivo {arquivo} sendo extraído para {dir_csv}")
+                logging.info(f"Arquivo {arquivo} sendo extraído para {dir_csv}")
                 # Extrair no mesmo diretório data
                 # arquivo.extractall(path="../data/")
 
                 # TODO: talvez tenha que pegar o arquivo aqui pelo nome inicial e mudar o nome após extraído na pasta, com sistema de arquivos.
-            print(f"Arquivo {arquivo} extraído para {dir_csv} com suesso")
+            logging.info(f"Arquivo {arquivo} extraído para {dir_csv} com suesso")
             return csv_extraidos
     except:
-        print(f"Erro de descompressão do arquivo {caminho_nome_zip}")
+        logging.error(f"Erro de descompressão do arquivo {caminho_nome_zip}")
     return None
 
 
@@ -221,7 +224,9 @@ def status_carga(parcial: int, total: int):
 def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
     # Como poderiam vir vários arquivos dentro do .zip, recebemos uma lista, mas só nos interessa o primeiro (e único elemento) da lista
     caminho_nome_arquivo = caminho_nome_arquivo[0]
-    print(f"Caminho do arquivo .csv a carregar em memória: {caminho_nome_arquivo}")
+    logging.info(
+        f"Caminho do arquivo .csv a carregar em memória: {caminho_nome_arquivo}"
+    )
     # Campos selecionados do csv (?)
     campos_selecionados = list(mapeamento_nome_campos[tabela].keys())
     tipos_selecionados = mapeamento_nome_campos[tabela]
@@ -253,7 +258,7 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
         ) as csv_reader:
             for chunk in csv_reader:
                 n_items_csv = n_items_csv + int(chunk.shape[0])
-            print(f"Total de {n_items_csv} a serem carregados em memória")
+            logging.info(f"Total de {n_items_csv} a serem carregados em memória")
         with pd.read_csv(
             caminho_nome_arquivo,
             dtype=tipos_selecionados,
@@ -266,7 +271,7 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
             index_col=False,
             low_memory=False,
         ) as csv_reader:
-            print(f"Salvando os registros na tabela {tabela}")
+            logging.info(f"Salvando os registros na tabela {tabela}")
             for chunk in csv_reader:
                 # Salva no banco de dados os registros:
                 if sql_engine is not None:
@@ -290,32 +295,32 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
                         end_insert = time.time() - start_insert
                         if end_insert < 60:
                             end_insert = round(end_insert)
-                            print(
+                            logging.info(
                                 f"*{tabela}* Foram salvos {n_carregados} registros de um total de {n_items_csv} ({porcentagem}%) [{end_insert} segundos]."
                             )
                         else:
                             minutes = round(end_insert / 60)
-                            print(
+                            logging.info(
                                 f"*{tabela}* Foram salvos {n_carregados} registros de um total de {n_items_csv} ({porcentagem}%) [{minutes} minutos]."
                             )
                     except Exception as e:
-                        print(f"Erro ao salvar os dados na tabela {tabela}:")
-                        print(e)
+                        logging.error(f"Erro ao salvar os dados na tabela {tabela}:")
+                        logging.error(e)
 
             # soma os valores se já existe algum valor não nulo. Quando está nulo, adiciona o novo valor.
             current_loaded = n_registros_carregados[tabela]["n_items_csv"]
             # Se o valor já existe, soma
             if current_loaded:
-                print(f"current_loaded: {current_loaded}")
+                logging.info(f" Registros carregados: {current_loaded}")
                 n_registros_carregados[tabela]["n_items_csv"] = (
                     current_loaded + n_items_csv
                 )
                 tabela_n_items_csv = n_registros_carregados[tabela]["n_items_csv"]
-                print(f"n_registros_carregados[{tabela}]: {tabela_n_items_csv}")
+                logging.info(f"n_registros_carregados[{tabela}]: {tabela_n_items_csv}")
             else:
                 n_registros_carregados[tabela]["n_items_csv"] = n_items_csv
             tabela_n_items_csv = n_registros_carregados[tabela]["n_items_csv"]
-            print(
+            logging.info(
                 f'n_registros_carregados[{tabela}]["n_items_csv"] = {tabela_n_items_csv}'
             )
 
@@ -331,23 +336,27 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
             tabela_n_registros_carregados = n_registros_carregados[tabela][
                 "n_carregados"
             ]
-            print(
+            logging.info(
                 f'n_registros_carregados[{tabela}]["n_carregados"] = {tabela_n_registros_carregados}'
             )
             # Deletando o arquivo CSV após a carga.
             try:
                 os.remove(caminho_nome_arquivo)
-                print(f"→ Arquivo [{caminho_nome_arquivo}] deletado com sucesso.")
+                logging.info(
+                    f"→ Arquivo [{caminho_nome_arquivo}] deletado com sucesso."
+                )
             except Exception as e:
-                print(f"→ Erro ao remover arquivo [{caminho_nome_arquivo}].")
-                print(f"→ Ocorreu algo inesperado: [{str(e)}].")
+                logging.error(f"→ Erro ao remover arquivo [{caminho_nome_arquivo}].")
+                logging.error(f"→ Ocorreu algo inesperado: [{str(e)}].")
     except:
         exc_info = sys.exc_info()
-        print(f"Erro de carga do .CSV em memória via pandas: {exc_info}")
+        logging.error(f"Erro de carga do .CSV em memória via pandas: {exc_info}")
 
 
 # Fluxo de execução principal do programa
 def ingest_datasets():
+    # Configurações de logging
+    logging.basicConfig(filename="ingest.log", encoding="utf-8", level=logging.DEBUG)
     # Instantiate sqlachemy.create_engine object
     sql_engine = None
     try:
@@ -356,37 +365,39 @@ def ingest_datasets():
         # Adding pass to the connection string
         db_url = f"postgresql://postgres:{db_password}@localhost:5432/qd_receita"
         sql_engine = create_engine(db_url, isolation_level="AUTOCOMMIT")
-        print(f"Motor de acesso ao SGBD PostgreSQL conectado com sucesso: {sql_engine}")
+        logging.info(
+            f"Motor de acesso ao SGBD PostgreSQL conectado com sucesso: {sql_engine}"
+        )
     except:
-        print(f"Erro de conexão via SQLAlchemy: {sys.exc_info()}")
+        logging.error(f"Erro de conexão via SQLAlchemy: {sys.exc_info()}")
 
     # Para cada tabela/tema (ex.: socio, estabelecimento, cnae, empresa, etc.):
     # for chave in sorted(mapeamento_tabelas_zip.keys(), key=str.lower, reverse=False):
     for chave in mapeamento_tabelas_zip.keys():
-        print(
+        logging.info(
             f"*{chave}* Carregando dados do CSV em memória e processando para a tabela no banco de dados..."
         )
         try:
             # Pegar lista de nomes de arquivos .zip relacionados à tabela
             lista_zip = pegar_lista_zip(mapeamento_tabelas_zip[chave])
             lista_zip = sorted(lista_zip, key=str.lower, reverse=False)
-            print(f"Lista de arquivos para a tabela: \n {lista_zip}")
+            logging.info(f"Lista de arquivos para a tabela: \n {lista_zip}")
             n_linhas_total = 0
             for arquivo_zip in lista_zip:
                 # Descompactar os arquivos .zip da tabela
                 descomprimiu = False
                 try:
-                    print(f"Descomprinindo arquivo {arquivo_zip}")
+                    logging.info(f"Descomprinindo arquivo {arquivo_zip}")
                     arquivo_csv = descomprimir_zip(f"{arquivo_zip}")
                     descomprimiu = True
                 except Exception as e:
-                    print(f"Erro de descompressão do arquivo {arquivo_zip}")
-                    print(e)
+                    logging.error(f"Erro de descompressão do arquivo {arquivo_zip}")
+                    logging.error(e)
                 if descomprimiu:
                     # Carregar o csv em memória
                     try:
                         start_time = time.time()
-                        print(
+                        logging.info(
                             f"Arquivo {arquivo_zip} descomprimido com sucesso. Carregando CSV em memória para salvar registros na tabela do banco de dados..."
                         )
                         # Implementação multi-thread
@@ -403,31 +414,35 @@ def ingest_datasets():
                             tt = t2 - t1
                             if tt > 60:
                                 tt = round(tt / 60)
-                                print(f"Demorou {tt} minutos")
+                                logging.info(f"Demorou {tt} minutos")
                             else:
                                 tt = str(tt)[:-3]
-                                print(f"Demorou {tt} segundos")
+                                logging.info(f"Demorou {tt} segundos")
                         # Carregar o .csv  em memória e persistir as linhas no banco de dados, usando sqlalchemy
                         # sucesso = carregar_dados(arquivo_csv, chave, sql_engine)
                         # sucesso = carregar_tabela(arquivo_csv, chave, 'qd_receita', 'localhost', '5432', 'postgres', pwd)
                         tempo_carga = time.time() - start_time
                         if tempo_carga > 60:
                             tempo_carga = round(tempo_carga / 60)
-                            print(f"A carga dos dados demorou {tempo_carga} minutos.")
+                            logging.info(
+                                f"A carga dos dados demorou {tempo_carga} minutos."
+                            )
                         else:
                             tempo_carga = str(tempo_carga)[:-3]
-                            print(f"A carga dos dados demorou {tempo_carga} segundos.")
+                            logging.info(
+                                f"A carga dos dados demorou {tempo_carga} segundos."
+                            )
                     except:
                         exc_info = sys.exc_info()
-                        print(f"Erro de carga do .csv em memória: \n{exc_info}")
+                        logging.error(f"Erro de carga do .csv em memória: \n{exc_info}")
                     # TODO: Delete the unzipped .csv file after been processed.
-            print(f"Fim da carga dos arquivos CSV para a chave {chave}")
+            logging.info(f"Fim da carga dos arquivos CSV para a chave {chave}")
         except:
-            print(
+            logging.error(
                 f"Erro na busca de arquivos zip para a tabela {chave}: \n \t{sys.exc_info()}"
             )
-    print("→→→ Contagem de registros baixados e inseridos:")
-    print(n_registros_carregados)
+    logging.info("*** Contagem de registros baixados e inseridos:")
+    logging.info(n_registros_carregados)
     empresa_n_items_csv = n_registros_carregados["empresa"]["n_items_csv"]
     empresa_n_carregados = n_registros_carregados["empresa"]["n_carregados"]
     estabelecimento_n_items_csv = n_registros_carregados["estabelecimento"][
@@ -436,28 +451,32 @@ def ingest_datasets():
     estabelecimento_n_carregados = n_registros_carregados["estabelecimento"][
         "n_carregados"
     ]
-    print("EMPRESA")
-    print(f"CSV: {empresa_n_items_csv} | Registros: {empresa_n_carregados}")
-    print("ESTABELECIMENTO")
-    print(
-        f"CSV: {estabelecimento_n_items_csv} | Registros: {estabelecimento_n_carregados}"
+    logging.info("* EMPRESA")
+    logging.info(
+        f" Registros no CSV: {empresa_n_items_csv} | Registros carregados no banco: {empresa_n_carregados}"
+    )
+    logging.info("* ESTABELECIMENTO")
+    logging.info(
+        f"Registros no CSV: {estabelecimento_n_items_csv} | Registros carregados no banco: {estabelecimento_n_carregados}"
     )
     if empresa_n_items_csv != estabelecimento_n_items_csv:
         porcentagem = status_carga(estabelecimento_n_items_csv, empresa_n_items_csv)
-        print(
+        logging.info(
             f"*** Itens esperados:\tEstabalecimentos: {estabelecimento_n_items_csv} \t| Empresa: {empresa_n_items_csv} ({porcentagem}%)"
         )
     else:
-        print(
+        logging.error(
             "Mesmo número de linhas a serem carregadas para estabelecimentos e empresas!"
         )
     if empresa_n_carregados != estabelecimento_n_carregados:
         porcentagem = status_carga(estabelecimento_n_carregados, empresa_n_carregados)
-        print(
+        logging.info(
             f"*** Itens carregados:\tEstabalecimentos: {estabelecimento_n_items_csv} \t| Empresa: {empresa_n_items_csv} ({porcentagem}%)"
         )
     else:
-        print("Mesmo número de linhas carregadas para estabelecimentos e empresas!")
+        logging.error(
+            "Mesmo número de linhas carregadas para estabelecimentos e empresas!"
+        )
     pass
 
 

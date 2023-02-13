@@ -2,6 +2,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from psycopg2 import extras
 from querido_diario_toolbox.process.text_process import remove_breaks
+import logging
 
 
 def get_n_total_cnpj(cursor=None):
@@ -13,9 +14,10 @@ def get_n_total_cnpj(cursor=None):
         if results is not None:
             return results[0]["count_cnpj"]
 
+
 # Retorna um objeto dicionário com uma chave para cada cnpj_basico e uma tupla  ordem, dv para cada cnpj_basico
 def get_all_cnpj_ids(cursor=None, offset=0, limit=10000, resultados_parcial={}):
-    print(f"Offset: {offset} | Limit: {limit}")
+    logging.info(f"Offset: {offset} | Limit: {limit}")
     # Quando não tem limite, deve retornar tudo, portanto na consulta sem limites, deve ser omitido o parâmetro
     if limit == 0:
         sql = f"SELECT cnpj_basico, cnpj_ordem, cnpj_dv from estabelecimento order by cnpj_basico offset {offset}"
@@ -28,13 +30,13 @@ def get_all_cnpj_ids(cursor=None, offset=0, limit=10000, resultados_parcial={}):
             cursor.execute(sql)
             results = cursor.fetchall()
         except Exception as e:
-            print(f"Erro! SQL: {sql}")
-            print(e)
+            logging.error(f"Erro! SQL: {sql}")
+            logging.error(e)
         if results is not None:
             for item in results:
-                cb = item['cnpj_basico']
-                od = item['cnpj_ordem']
-                dv = item['cnpj_dv']
+                cb = item["cnpj_basico"]
+                od = item["cnpj_ordem"]
+                dv = item["cnpj_dv"]
                 try:
                     verifica = resultados_parcial[cb]
                     # se já existe uma chave no dicionário para o cnpj básico, adiciona a tupla à lista do cnpj_basico
@@ -42,10 +44,11 @@ def get_all_cnpj_ids(cursor=None, offset=0, limit=10000, resultados_parcial={}):
                         verifica.append((od, dv))
                 # se não existe, insere uma tupla em uma nova lista para esta chave
                 except Exception as e:
-                    print(e)
+                    logging.error(e)
                     resultados_parcial[cb] = [(od, dv)]
             return resultados_parcial
         return None
+
 
 def batch_insert_resposta_cnpj(cursor, resposta_cnpj_lista_valores):
     # Consulta adaptada para inserção via execute_batch
@@ -57,11 +60,11 @@ def batch_insert_resposta_cnpj(cursor, resposta_cnpj_lista_valores):
     if cursor is not None and resposta_cnpj_lista_valores is not None:
         try:
             extras.execute_batch(cursor, sql_insert, resposta_cnpj_lista_valores)
-            print(
+            logging.info(
                 f"Batch insert executado salvou {len(resposta_cnpj_lista_valores)} itens"
             )
         except Exception as e:
-            print("Erro de inserção batch: " + str(e))
+            logging.error("Erro de inserção batch: " + str(e))
 
 
 def batch_insert_resposta_socios(cursor, lista_resposta_socios):
@@ -71,7 +74,7 @@ def batch_insert_resposta_socios(cursor, lista_resposta_socios):
         try:
             extras.execute_batch(cursor, sql_insert, lista_resposta_socios)
         except Exception as e:
-            print("Erro de inserção batch: " + str(e))
+            logging.error("Erro de inserção batch: " + str(e))
 
 
 # Processar a partir de um CNPJ as tabelas relacionadas à empresa e possíveis dados do simples
@@ -153,7 +156,7 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
                             "empresa_qualificacao_do_responsavel"
                         ] = empresa_qualificacao_do_responsavel
                 else:
-                    print(
+                    logging.error(
                         f"Erro! Porte da empresa {empresa_qualificacao_do_responsavel} não encontrado"
                     )
                     resposta_cnpj[
@@ -185,7 +188,9 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
                     else:
                         resposta_cnpj["empresa_porte"] = empresa_porte
                 else:
-                    print(f"Erro! Porte da empresa {empresa_porte} não encontrado")
+                    logging.error(
+                        f"Erro! Porte da empresa {empresa_porte} não encontrado"
+                    )
                     resposta_cnpj["empresa_porte"] = empresa_porte
             else:
                 resposta_cnpj["empresa_porte"] = None
@@ -270,7 +275,7 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
                 resposta_cnpj["simples_data_exclusao_pelo_mei"] = None
         return resposta_cnpj
     else:
-        print("Cursor is None")
+        logging.error("Cursor nulo!")
         return None
     pass
 
@@ -364,8 +369,8 @@ def process_resposta_cnpjs_estabelecimento(
             estabelecimento_cnpj_ordem = campos_cnpj["estabelecimento_cnpj_ordem"]
             if estabelecimento_cnpj_ordem is not None:
                 while len(estabelecimento_cnpj_ordem) < 4:
-                    print(
-                        "Remoção de zeros à esquerda e garantia da corretude do campo ORDEM do CNPJ"
+                    logging.info(
+                        "* Remoção de zeros à esquerda e garantia da corretude do campo ORDEM do CNPJ"
                     )
                     estabelecimento_cnpj_ordem = "0" + estabelecimento_cnpj_ordem
                 resposta_cnpj["estabelecimento_cnpj_ordem"] = estabelecimento_cnpj_ordem
@@ -400,7 +405,7 @@ def process_resposta_cnpjs_estabelecimento(
                             "estabelecimento_identificador_matriz_filial"
                         ] = identificador_matriz_filial
                 else:
-                    print(
+                    logging.error(
                         f"Erro! Identificador matriz/filial {identificador_matriz_filial} não encontrado"
                     )
                     resposta_cnpj[
@@ -446,7 +451,7 @@ def process_resposta_cnpjs_estabelecimento(
                             "estabelecimento_situacao_cadastral"
                         ] = situacao_cadastral
                 else:
-                    print(
+                    logging.error(
                         f"Erro! Situação cadastral {situacao_cadastral} não encontrada"
                     )
                     resposta_cnpj[
@@ -541,7 +546,9 @@ def process_resposta_cnpjs_estabelecimento(
                                 items_desc_completa.append(cnae_cod_desc)
 
                             else:
-                                print(f"Erro! CNAE {cnae_codigo} não encontrado")
+                                logging.error(
+                                    f"Erro! CNAE {cnae_codigo} não encontrado"
+                                )
                         resposta_cnpj[
                             "estabelecimento_cnae_fiscal_secundario"
                         ] = ";".join(items_desc_completa)
@@ -720,7 +727,7 @@ def process_resposta_cnpjs_estabelecimento(
                         cnae_cod_desc = cnae_codigo
                     resposta_cnpj["cnae"] = cnae_cod_desc
                 else:
-                    print(f"Erro! CNAE {cnae_codigo} não encontrado")
+                    logging.error(f"Erro! CNAE {cnae_codigo} não encontrado")
                     resposta_cnpj["cnae"] = str(
                         campos_cnpj["estabelecimento_cnae_fiscal"]
                     )
@@ -762,7 +769,7 @@ def process_resposta_cnpjs_estabelecimento(
                     pais_cod_desc = pais_cod
                 resposta_cnpj["pais"] = f"{pais_cod_desc}"
             else:
-                print(f"Erro! País {pais_codigo} não encontrado")
+                logging.error(f"Erro! País {pais_codigo} não encontrado")
                 resposta_cnpj["pais"] = str(campos_cnpj["estabelecimento_pais"])
 
             # Consulta para busca do município:
@@ -788,7 +795,9 @@ def process_resposta_cnpjs_estabelecimento(
                             municipio_cod_desc = municipio_cod
                         resposta_cnpj["municipio"] = f"{municipio_cod_desc}"
                     else:
-                        print(f"Erro! Município {municipio_codigo} não encontrado.")
+                        logging.error(
+                            f"Erro! Município {municipio_codigo} não encontrado."
+                        )
                         resposta_cnpj["municipio"] = str(
                             campos_cnpj["estabelecimento_municipio"]
                         )
@@ -796,7 +805,7 @@ def process_resposta_cnpjs_estabelecimento(
                 resposta_cnpj["municipio"] = None
             return resposta_cnpj
     else:
-        print("Cursor is None")
+        logging.info("Cursor is None")
         return None
     pass
 
@@ -836,7 +845,7 @@ def set_estabelecimento_blank(resposta_cnpj):
 
 # Processar a partir de um CNPJ as tabelas relacionadas aos sócios da empresa
 def process_resposta_socios(cnpj_basico: str, cursor=None):
-    print(f"Processando socio para CNPJ {cnpj_basico}")
+    logging.info(f"Processando socio para CNPJ {cnpj_basico}")
     # Executa uma consulta ao banco para retornar com join as informações das tabelas complementares e montar o registro a ser salvo na tabela resposta_cnpj
     sql = "SELECT socio.cnpj_basico as socio_cnpj_basico,"
     sql = sql + " socio.identificador_socio as socio_identificador_socio,"
@@ -867,7 +876,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
             cursor.execute(sql)
             results = cursor.fetchall()
         except Exception as e:
-            print(e)
+            logging.error(e)
         # Armazena os campos a serem salvos na tabela de resposta_socios
         resposta_socios = {}
         campos_socios = {}
@@ -891,7 +900,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                         cursor.execute(sql)
                         results = cursor.fetchall()
                     except Exception as e:
-                        print(e)
+                        logging.error(e)
                     if results is not None and results != []:
                         # SHould be a single result, fetch first
                         campos = results[0]
@@ -910,7 +919,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                         resposta_socios[
                             "socio_identificador_socio"
                         ] = identificador_socio
-                        print(
+                        logging.error(
                             f"Erro! Identificador Sócio {identificador_socio} não encontrado"
                         )
                 else:
@@ -934,7 +943,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                         cursor.execute(sql_qualificacao_socio)
                         results_qs = cursor.fetchall()
                     except Exception as e:
-                        print(e)
+                        logging.error(e)
 
                     if results_qs is not None and results_qs != []:
                         r = results_qs[0]
@@ -977,7 +986,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                         cursor.execute(sql_pais)
                         results = cursor.fetchall()
                     except Exception as e:
-                        print(e)
+                        logging.error(e)
                     if results is not None and results != []:
                         # Should be a single result, fetch first
                         campos_pais = results[0]
@@ -988,7 +997,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                             pais_cod_desc = pais_cod
                         resposta_socios["pais_socio_estrangeiro"] = f"{pais_cod_desc}"
                     else:
-                        print(f"Erro! País {pais_codigo} não encontrado")
+                        logging.error(f"Erro! País {pais_codigo} não encontrado")
                         resposta_socios["pais_socio_estrangeiro"] = pais_codigo
                 else:
                     resposta_socios["pais_socio_estrangeiro"] = str(
@@ -1015,7 +1024,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                         cursor.execute(sql)
                         results = cursor.fetchall()
                     except Exception as e:
-                        print(e)
+                        logging.error(e)
                     if results is not None and results != []:
                         # Should be a single result, fetch first
                         campos = results[0]
@@ -1030,7 +1039,7 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                             resposta_socios["socio_faixa_etaria"] = faixa_etaria
                     else:
                         resposta_socios["socio_faixa_etaria"] = identificador_socio
-                        print(
+                        logging.error(
                             f"Erro! Faixa etária {identificador_socio} não encontrada"
                         )
                 else:
@@ -1054,7 +1063,7 @@ def conecta(password):
         conn.autocommit = True
         return conn
     except Exception as e:
-        print(e)
+        logging.error(e)
 
 
 # Formata strings de data do tipo yyyymmdd para o padrão brasileiro dd/mm/yyyy
@@ -1064,6 +1073,7 @@ def formata_data(date):
         return data_formatada
     else:
         return None
+
 
 def generate_cnpj_dv(cnpj_without_dv: str) -> str:
     first_digit = calculate_cnpj_dv_digit(cnpj_without_dv)
@@ -1089,6 +1099,10 @@ def calculate_cnpj_dv_digit(cnpj_without_dv: str, first_digit: str = "") -> str:
 
 
 if __name__ == "__main__":
+    # Configurações de logging
+    logging.basicConfig(
+        filename="process_cnpjs.log", encoding="utf-8", level=logging.DEBUG
+    )
     # Estabelece conexão com o BD
     conn = conecta("change here")
     if conn is not None:
@@ -1104,7 +1118,9 @@ if __name__ == "__main__":
             dict_lista_cnpj_fatia = {}
             try:
                 # Pega uma lista de cnpjs da fatia
-                dict_lista_cnpj_fatia = get_all_cnpj_ids(cursor, offset, block_size, dict_lista_cnpj_fatia)
+                dict_lista_cnpj_fatia = get_all_cnpj_ids(
+                    cursor, offset, block_size, dict_lista_cnpj_fatia
+                )
                 # Lista de objetos do tipo dicionário a serem inseridos em batch para a resposta_cnpj
                 lista_resposta_cnpj = []
                 # Resposta da empresa, processada apenas na filial
@@ -1114,12 +1130,14 @@ if __name__ == "__main__":
                     for cnpj_basico in dict_lista_cnpj_fatia.keys():
                         # Dicionário com os campos a serem salvos e consolidados na tabela resposta_cnpj
                         resposta_cnpj = None
-                        # print(f"* Processando dados para o CNPJ {cnpj_basico}")
+                        # logging.info(f"* Processando dados para o CNPJ {cnpj_basico}")
 
                         # Primeira vez executando para este cnpj_basico, processa a resposta_empresa, resposta_socios e adiciona a lista de cnpj_carregados
 
                         # Empresa relacionada ao CNPJ, basta executar uma vez por CNPJ BASICO
-                        resposta_cnpjs_empresa = process_resposta_cnpjs_empresa(cnpj_basico, cursor)
+                        resposta_cnpjs_empresa = process_resposta_cnpjs_empresa(
+                            cnpj_basico, cursor
+                        )
 
                         # Processa lista de sócios para o dado cnpj
                         process_resposta_socios(cnpj_basico, cursor)
@@ -1128,7 +1146,7 @@ if __name__ == "__main__":
                         for tupla in dict_lista_cnpj_fatia[cnpj_basico]:
                             ordem = tupla[0]
                             dv = tupla[1]
-                            if ordem and dv:        
+                            if ordem and dv:
                                 resposta_cnpjs_estabelecimento = (
                                     process_resposta_cnpjs_estabelecimento(
                                         cnpj_basico,
@@ -1139,25 +1157,30 @@ if __name__ == "__main__":
                                 )
 
                                 # Caso hajam dados de empresa e estabelecimento, unifica o documento
-                                if resposta_cnpjs_empresa and resposta_cnpjs_estabelecimento:
+                                if (
+                                    resposta_cnpjs_empresa
+                                    and resposta_cnpjs_estabelecimento
+                                ):
                                     # Aqui é unificada em um único objeto resposta_cnpj a informação do estabelecimento com a informação da empresa
                                     resposta_cnpj = {
                                         **resposta_cnpjs_empresa,
                                         **resposta_cnpjs_estabelecimento,
                                     }
                                     # Adiciona o dicionário à lista de objetos a serem inseridos em batch
-                                    lista_resposta_cnpj.append(list(resposta_cnpj.values()))
+                                    lista_resposta_cnpj.append(
+                                        list(resposta_cnpj.values())
+                                    )
                     # Persiste os registros da fatia em batch no banco
                     batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
                 else:
                     lista_cnpj = None
                 offset = offset + block_size
             except Exception as e:
-                print(f"Final da lista de CNPJs a carregar atingido.")
-                print(e)
+                logging.error(f"Final da lista de CNPJs a carregar atingido.")
+                logging.error(e)
             lista_cnpj_processados.append(dict_lista_cnpj_fatia)
-            # print("CNPJs carregados:")
-            # print(lista_cnpj_processados)
+            # logging.info("CNPJs carregados:")
+            # logging.info(lista_cnpj_processados)
         # Final do laço while
         # Encerra a conexão com o BD
         conn.commit()

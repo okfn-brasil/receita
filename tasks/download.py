@@ -5,6 +5,7 @@ import requests
 import time
 from parsel import Selector
 import hashlib
+import logging
 
 # Retorna o nome do arquivo a partir da URL completa
 def get_file_name(url):
@@ -15,18 +16,21 @@ def get_file_name(url):
     return file_name
 
 
+# Fluxo principal de execução
 def download_datasets():
+    # Configurações de logging
+    logging.basicConfig(filename="download.log", encoding="utf-8", level=logging.DEBUG)
     downloaded_datasets = []
     datasets_urls = get_datasets_urls()
     n_files = len(list(datasets_urls.copy()))
-    print(f"Existem {n_files} arquivos a baixar")
+    logging.info(f"Existem {n_files} arquivos a baixar")
     for url in datasets_urls.copy():
-        print(url)
+        logging.info(url)
     for url in datasets_urls:
         is_file_downloaded = download_file(url)
         if is_file_downloaded:
             downloaded_datasets.append(url)
-    print(f"Foram baixados {len(downloaded_datasets)} arquivos.")
+    logging.info(f"Foram baixados {len(downloaded_datasets)} arquivos.")
 
 
 # Método que varre a página html que contém a lista de arquivos .zip com o dump do banco de dados de CNPJs da Receita Federal, retornando uma lista com os resultados
@@ -41,8 +45,9 @@ def get_datasets_urls():
     full_urls = []
     for url in datasets_urls:
         full_urls.append("http://200.152.38.155/CNPJ/" + url)
-    print(full_urls)
+    logging.info(full_urls)
     return full_urls
+
 
 def remove_malformed_http(url: str):
     return re.sub(r"http//", "", url)
@@ -67,8 +72,8 @@ def get_remote_file(url, file_path, retry: bool = False):
         # Verifica se com, ou sem retry, foi possível baixar o arquivos
         return local_file_exists(file_path)
     except Exception as e:
-        print("Erro de download:")
-        print(e)
+        logging.error("Erro de download:")
+        logging.error(e)
         return False
 
 
@@ -82,7 +87,7 @@ def local_file_exists(file_path):
 def retry_download(url, file_path, retry: bool = False):
     # Verificar se uma nova versão do arquivo foi baixada
     if not local_file_exists(file_path):
-        print(
+        logging.error(
             f"Não foi possível baixar o arquivo. Tentando download novamente em 2 minutos para o arquivo {file_path}"
         )
         # Se deu erro, esperar 2 minutos e tentar novamente
@@ -91,7 +96,7 @@ def retry_download(url, file_path, retry: bool = False):
             time.sleep(120)
             download_file(url, True)
         else:
-            print(
+            logging.error(
                 f"Fim da segunda tentativa. Download do arquivo {file_name} não foi realizado. Tentar novamente em outro momento, ou verificar problema no servidor."
             )
 
@@ -107,7 +112,7 @@ def get_file_path(file_name: str):
 def download_file(url: str, retry: bool = False):
     # get file name
     file_name = get_file_name(url)
-    print(f"Baixando arquivo {file_name}")
+    logging.info(f"Baixando arquivo {file_name}")
     # full path to file
     file_path = get_file_path(file_name)
     # Objeto para armazenar os metadados do arquivo remoto
@@ -117,20 +122,18 @@ def download_file(url: str, retry: bool = False):
         # Chamando primeiro a requisição remota de metadados para verificar o tamanho do arquivo antes de baixar
         info = requests.head(url)
     except Exception as e:
-        print(f"→ Erro de verificação preventiva de metadados do arquivo {file_name}.")
+        logging.error(f"→ Erro de verificação preventiva de metadados do arquivo {file_name}.")
     # Conseguiu a informação sobre o arquivo remoteo
     if info:
         remote_file_size = info.headers["Content-Length"]
         if remote_file_size:
-            print(f"Tamanho do arquivo remoto: {remote_file_size} bytes")
+            logging.info(f"Tamanho do arquivo remoto: {remote_file_size} bytes")
             # Caso exista arquivo anterior, calcular checksum e comparar
-            print(f"Arquivo a verificar em disco: {file_path}")
+            logging.info(f"Arquivo a verificar em disco: {file_path}")
             if local_file_exists(file_path):
                 local_file_size = str(os.path.getsize(file_path))
                 if local_file_size:
-                    print(
-                        f"Tamanho do arquivo em disco: {remote_file_size} bytes"
-                    )
+                    logging.info(f"Tamanho do arquivo em disco: {remote_file_size} bytes")
                     # Para garantir a integridade entre cargas, será implementada uma verificação do tamanho do arquivo remoto
                     # contra o arquivo baixado anteriormente, ainda em disco, através do checksum
                     local_file_hash = generate_sha256_checksum(
@@ -142,28 +145,28 @@ def download_file(url: str, retry: bool = False):
                     # Arquivos com tamanhos o nomes diferentes, houve alguma mudança nos arquivos. Substitui o velho pelo novo.
                     if local_file_hash != remote_file_hash:
                         # TODO: Aqui, ao invés de deletar o antigo, vai armazenar o antigo em outro diretório no Spaces e manter o novo
-                        print(
+                        logging.info(
                             "O arquivo local em disco e o arquivo remoto tem tamanhos diferentes, ou mudaram de nome. Removendo o arquivo local e baixa do servidor."
                         )
                         # Remove o arquivo antigo
                         try:
                             os.remove(file_path)
                         except Exception as e:
-                            print(f"Erro! Não foi possível remover arquivo {file_name}")
-                            print(e)
+                            logging.error(f"Erro! Não foi possível remover arquivo {file_name}")
+                            logging.error(e)
                         # Realiza a chamada para baixar o novo arquivo
                         return get_remote_file(url, file_path, retry)
                     else:
-                        print(
+                        logging.error(
                             "O arquivo já existe em disco e não sofreu alterações, portanto não é necessário baixar novamente."
                         )
                         return False
             else:
-                print("Arquivo não existe no disco, é necessário baixar.")
+                logging.info("Arquivo não existe no disco, é necessário baixar.")
                 return get_remote_file(url, file_path, retry)
     # Não foi possível pegar metadados preventivamente, considera não existente e baixa o novo arquivo
     else:
-        print(
+        logging.info(
             f"Não foi possível carregar preventivamente os metadados do arquivo {file_name}. Baixar arquivo."
         )
         return get_remote_file(url, file_path, retry)
