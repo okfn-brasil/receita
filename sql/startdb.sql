@@ -475,7 +475,6 @@ ALTER TABLE cnae ADD CONSTRAINT pk_cnae_codigo PRIMARY KEY (codigo);
 ALTER TABLE IF EXISTS simples DROP CONSTRAINT IF EXISTS pk_simples_id;
 ALTER TABLE simples ADD CONSTRAINT pk_simples_id PRIMARY KEY (cnpj_basico);
 ALTER TABLE IF EXISTS socio DROP CONSTRAINT IF EXISTS pk_socio_id;
-ALTER TABLE socio ADD CONSTRAINT pk_socio_id PRIMARY KEY (cnpj_basico);
 ALTER TABLE IF EXISTS resposta_socios DROP CONSTRAINT IF EXISTS pk_resposta_socios_id;
 
 -- Foreign Keys:
