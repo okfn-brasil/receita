@@ -122,7 +122,9 @@ def download_file(url: str, retry: bool = False):
         # Chamando primeiro a requisição remota de metadados para verificar o tamanho do arquivo antes de baixar
         info = requests.head(url)
     except Exception as e:
-        logging.error(f"→ Erro de verificação preventiva de metadados do arquivo {file_name}.")
+        logging.error(
+            f"→ Erro de verificação preventiva de metadados do arquivo {file_name}."
+        )
     # Conseguiu a informação sobre o arquivo remoteo
     if info:
         remote_file_size = info.headers["Content-Length"]
@@ -133,7 +135,9 @@ def download_file(url: str, retry: bool = False):
             if local_file_exists(file_path):
                 local_file_size = str(os.path.getsize(file_path))
                 if local_file_size:
-                    logging.info(f"Tamanho do arquivo em disco: {remote_file_size} bytes")
+                    logging.info(
+                        f"Tamanho do arquivo em disco: {remote_file_size} bytes"
+                    )
                     # Para garantir a integridade entre cargas, será implementada uma verificação do tamanho do arquivo remoto
                     # contra o arquivo baixado anteriormente, ainda em disco, através do checksum
                     local_file_hash = generate_sha256_checksum(
@@ -152,7 +156,9 @@ def download_file(url: str, retry: bool = False):
                         try:
                             os.remove(file_path)
                         except Exception as e:
-                            logging.error(f"Erro! Não foi possível remover arquivo {file_name}")
+                            logging.error(
+                                f"Erro! Não foi possível remover arquivo {file_name}"
+                            )
                             logging.error(e)
                         # Realiza a chamada para baixar o novo arquivo
                         return get_remote_file(url, file_path, retry)

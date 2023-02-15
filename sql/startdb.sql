@@ -31,7 +31,7 @@ create table estabelecimento (
 	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
 	data_situacao_cadastral VARCHAR(10),
 	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
-	motivo_situacao_cadastral VARCHAR(11),
+	motivo_situacao_cadastral VARCHAR(100),
 	-- NOME DA CIDADE NO EXTERIOR
 	nome_cidade_exterior VARCHAR,
 	-- CÓDIGO DO PAIS
