@@ -1137,9 +1137,9 @@ if __name__ == "__main__":
     if conn is not None:
         cursor = conn.cursor()
         offset = 0
-        block_size = 1_000
-        # Dicionário que vai receber a lista com todos os cnpjs a carregar, com uma chave por cnpj_basico e uma tupla (ordem,dv) como valor
-        lista_cnpj_processados = []
+        block_size = 1_00
+        # Dicionário que vai receber os cnpjs já processados, com uma chave por cnpj_basico
+        lista_cnpj_processados = {}
         # Inicializa a variável
         dict_lista_cnpj_fatia = {}
         while dict_lista_cnpj_fatia is not None:
@@ -1161,17 +1161,16 @@ if __name__ == "__main__":
                             print(f"→→→ Processando cnpj_basico: {cnpj_basico}")
                             # Dicionário com os campos a serem salvos e consolidados na tabela resposta_cnpj
                             resposta_cnpj = None
-                            # logging.info(f"* Processando dados para o CNPJ {cnpj_basico}")
+                            cnpjs_processados = lista_cnpj_processados.keys()
+                            # Primeira vez executando para este cnpj_basico, processa a resposta_empresa, resposta_socios e adiciona à lista de cnpj_carregados
+                            if cnpj_basico not in cnpjs_processados:
+                                # Empresa relacionada ao CNPJ, basta executar uma vez por CNPJ BASICO
+                                resposta_cnpjs_empresa = process_resposta_cnpjs_empresa(
+                                    cnpj_basico, cursor
+                                )
+                                # Processa lista de sócios para o dado cnpj
+                                process_resposta_socios(cnpj_basico, cursor)
 
-                            # Primeira vez executando para este cnpj_basico, processa a resposta_empresa, resposta_socios e adiciona a lista de cnpj_carregados
-
-                            # Empresa relacionada ao CNPJ, basta executar uma vez por CNPJ BASICO
-                            resposta_cnpjs_empresa = process_resposta_cnpjs_empresa(
-                                cnpj_basico, cursor
-                            )
-                            # Processa lista de sócios para o dado cnpj
-                            process_resposta_socios(cnpj_basico, cursor)
-                            print(f"→→→ Finalizou processamento SOCIOS {cnpj_basico}")
                             # Objetos estabelecimento relacionados a este CNPJ:
                             tuplas = dict_lista_cnpj_fatia[cnpj_basico]
                             if tuplas:
@@ -1201,6 +1200,8 @@ if __name__ == "__main__":
                                             lista_resposta_cnpj.append(
                                                 list(resposta_cnpj.values())
                                             )
+                            # Registra a Empresa e os Sócios cujos dados foram carregados para evitar redundância entre fatias.
+                            lista_cnpj_processados[cnpj_basico] = None
                         # Persiste os registros da fatia em batch no banco
                         batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
                     # TODO: Verificar este fluxo de exceção
@@ -1211,7 +1212,7 @@ if __name__ == "__main__":
             except Exception as e:
                 logging.error(f"Final da lista de CNPJs a carregar atingido.")
                 logging.error(e)
-            lista_cnpj_processados.append(dict_lista_cnpj_fatia)
+
 
             # logging.info("CNPJs carregados:")
             # logging.info(lista_cnpj_processados)
