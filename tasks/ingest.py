@@ -22,16 +22,7 @@ import logging
 
 # Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .zip
 mapeamento_tabelas_zip = {
-    "empresa": "Empresas",  # "Empresas",
     "estabelecimento": "Estabelecimentos",  # "Estabelecimentos",
-    "simples": "Simples",
-    "socio": "Socios",
-    "pais": "Paises",  # "Paises",
-    "municipio": "Municipios",  # "Municipios",
-    "qualificacao_socio": "Qualificacoes",
-    "natureza_juridica": "Naturezas",  # "Naturezas",
-    "cnae": "Cnaes",  # "Cnaes",
-    "motivo": "Motivos",  # "Motivos"
 }
 
 # Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv
@@ -356,12 +347,19 @@ def carregar_dados(caminho_nome_arquivo: str, tabela: str, sql_engine):
 # Fluxo de execução principal do programa
 def ingest_datasets():
     # Configurações de logging
-    logging.basicConfig(filename="ingest.log", encoding="utf-8", level=logging.DEBUG)
+    logging.basicConfig(
+        handlers=[
+            logging.FileHandler(filename="./ingest.log", encoding="utf-8", mode="a+")
+        ],
+        format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
+        datefmt="%F %A %T",
+        level=logging.DEBUG,
+    )
     # Instantiate sqlachemy.create_engine object
     sql_engine = None
     try:
         # Remember to set here
-        db_password = "change here"
+        db_password = "postgres"
         # Adding pass to the connection string
         db_url = f"postgresql://postgres:{db_password}@localhost:5432/qd_receita"
         sql_engine = create_engine(db_url, isolation_level="AUTOCOMMIT")

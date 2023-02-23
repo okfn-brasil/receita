@@ -1130,25 +1130,28 @@ if __name__ == "__main__":
         ],
         format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
         datefmt="%F %A %T",
-        level=logging.INFO,
+        level=logging.DEBUG,
     )
     # Estabelece conexão com o BD
     conn = conecta("change HERE")
     if conn is not None:
         cursor = conn.cursor()
         offset = 0
-        block_size = 1_00
-        # Dicionário que vai receber os cnpjs já processados, com uma chave por cnpj_basico
+        block_size = 1_000
+        # Dicionário que vai receber os cnpjs já processados, com uma chave por cnpj_basico, cujos valores são uma lista de tuplas (str, str) para ordem e dv já processados
         lista_cnpj_processados = {}
+        # Dicionário que vai receber as informações da resposta_cnpj_empresa a ser consolidada com os dados do estabelecimento
+        dict_cnpj_empresa_processados = {}
         # Inicializa a variável
         dict_lista_cnpj_fatia = {}
         while dict_lista_cnpj_fatia is not None:
             try:
+                # import pdb; pdb.set_trace()
                 # Pega uma lista de cnpjs da fatia
                 dict_lista_cnpj_fatia = get_all_cnpj_ids(cursor, offset, block_size)
                 # Se ainda há registros a processar
                 if dict_lista_cnpj_fatia:
-                    # Lista de objetos do tipo dicionário a serem inseridos em batch para a resposta_cnpj
+                    # Lista de objetos do tipo lista a serem inseridos em batch para a fatia da resposta_cnpj a carregar
                     lista_resposta_cnpj = []
                     # Resposta da empresa, processada apenas na filial
                     resposta_cnpjs_empresa = None
@@ -1168,9 +1171,19 @@ if __name__ == "__main__":
                                 resposta_cnpjs_empresa = process_resposta_cnpjs_empresa(
                                     cnpj_basico, cursor
                                 )
+                                # Persiste as informações de resposta_cnpj_empresa para consolidar com as informações estabelecimento
+                                dict_cnpj_empresa_processados[
+                                    cnpj_basico
+                                ] = resposta_cnpjs_empresa
                                 # Processa lista de sócios para o dado cnpj
                                 process_resposta_socios(cnpj_basico, cursor)
-
+                                # Registra a Empresa e os Sócios cujos dados foram carregados para evitar redundância entre fatias, criando uma nova lista para a entrada do cnpj_basico
+                                lista_cnpj_processados[cnpj_basico] = []
+                            # Se não é a primeira vez, será necessário resgatar a resposta_cnpj_empresa para a verificação booleana da linha 1195 funcionar da maneira esperada
+                            else:
+                                resposta_cnpjs_empresa = dict_cnpj_empresa_processados[
+                                    cnpj_basico
+                                ]
                             # Objetos estabelecimento relacionados a este CNPJ:
                             tuplas = dict_lista_cnpj_fatia[cnpj_basico]
                             if tuplas:
@@ -1200,8 +1213,10 @@ if __name__ == "__main__":
                                             lista_resposta_cnpj.append(
                                                 list(resposta_cnpj.values())
                                             )
-                            # Registra a Empresa e os Sócios cujos dados foram carregados para evitar redundância entre fatias.
-                            lista_cnpj_processados[cnpj_basico] = None
+                                            # Registra a ordem e o dv do estabelecimento cujos dados foram carregados para fins de registro da carga
+                                            lista_cnpj_processados[cnpj_basico].append(
+                                                (ordem, dv)
+                                            )
                         # Persiste os registros da fatia em batch no banco
                         batch_insert_resposta_cnpj(cursor, lista_resposta_cnpj)
                     # TODO: Verificar este fluxo de exceção
@@ -1212,7 +1227,6 @@ if __name__ == "__main__":
             except Exception as e:
                 logging.error(f"Final da lista de CNPJs a carregar atingido.")
                 logging.error(e)
-
 
             # logging.info("CNPJs carregados:")
             # logging.info(lista_cnpj_processados)
