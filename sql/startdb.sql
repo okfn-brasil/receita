@@ -340,7 +340,7 @@ create table resposta_cnpj (
  	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
  	estabelecimento_data_situacao_cadastral VARCHAR(15),
  	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
- 	estabelecimento_motivo_situacao_cadastral VARCHAR(11),
+ 	estabelecimento_motivo_situacao_cadastral VARCHAR(100),
  	-- NOME DA CIDADE NO EXTERIOR
  	estabelecimento_nome_cidade_exterior VARCHAR,
  	-- DATA DE INÍCIO DA ATIVIDADE
