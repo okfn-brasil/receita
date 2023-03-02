@@ -895,7 +895,8 @@ if __name__ == "__main__":
     EXECUTION_TYPE_empresa_estabelecimentos = "2"
     EXECUTION_TYPE_socios = "3"
 
-    EXECUTION_TYPE = EXECUTION_TYPE_all
+    # Padrão começar primeiro com os dados de empresa/estabelecimento.
+    EXECUTION_TYPE = EXECUTION_TYPE_empresa_estabelecimentos
 
     # Configurações de logging
     logging.basicConfig(
@@ -919,7 +920,7 @@ if __name__ == "__main__":
     # Ess é o objeto responsável pelo acesso em memória aos dados das dimensões auxiliares
     aux_tables_data_interface = aux_tables_postgres_interface.get_table_objects()
     # Estabelece conexão com o BD
-    conn = conecta("postgres")
+    conn = conecta("change HERE")
     if conn is not None:
         cursor = conn.cursor()
         offset = 0
