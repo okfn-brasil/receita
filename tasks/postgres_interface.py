@@ -126,36 +126,94 @@ class PostgresInterface:
     def load_all(self):
         session = self.session
         try:
-            logging.info("→→→ Carregando objetos das tabelas/dimensões auxiliares em memória...")
-            self.table_objects["dim_matriz_filial"] = (
-                session.execute(select(DimMatrizFilial)).scalars().all()
-            )
-            self.table_objects["natureza_juridica"] = (
-                session.execute(select(NaturezaJuridica)).scalars().all()
-            )
-            self.table_objects["dim_faixa_etaria"] = (
-                session.execute(select(DimFaixaEtaria)).scalars().all()
-            )
-            self.table_objects["dim_identificador_socio"] = (
-                session.execute(select(DimIdentificadorSocio)).scalars().all()
-            )
-            self.table_objects["dim_porte_empresa"] = (
-                session.execute(select(DimPorteEmpresa)).scalars().all()
-            )
-            self.table_objects["dim_situacao_cadastral"] = (
-                session.execute(select(DimSituacaoCadastral)).scalars().all()
-            )
-            self.table_objects["cnae"] = session.execute(select(Cnae)).scalars().all()
-            self.table_objects["motivo"] = (
-                session.execute(select(Motivo)).scalars().all()
-            )
-            self.table_objects["municipio"] = (
-                session.execute(select(Municipio)).scalars().all()
-            )
-            self.table_objects["qualificacao_socio"] = (
-                session.execute(select(QualificacaoSocio)).scalars().all()
-            )
-            self.table_objects["pais"] = session.execute(select(Pais)).scalars().all()
+            logging.info("→→→ Carregando tabelas/dimensões auxiliares em memória em objetos tipo dicionário com uma chave para cada código e a descrição como valor do dicionário para a chave")
+
+            matriz_filial = session.execute(select(DimMatrizFilial)).scalars().all()
+            matriz_filial_dict = {}
+            for item in matriz_filial:
+                matriz_filial_dict[item.codigo] = item.descricao
+            self.table_objects["dim_matriz_filial"] = matriz_filial_dict
+
+            natureza_juridica = session.execute(select(NaturezaJuridica)).scalars().all()
+            natureza_juridica_dict = {}
+            for item in natureza_juridica:
+                cod = item.codigo
+                if cod:
+                    natureza_juridica_dict[cod] = item.descricao
+            self.table_objects["natureza_juridica"] = natureza_juridica_dict
+
+            faixa_etaria = session.execute(select(DimFaixaEtaria)).scalars().all()
+            faixa_etaria_dict = {}
+            for item in faixa_etaria:
+                cod = item.codigo
+                if cod:
+                    faixa_etaria_dict[cod] = item.descricao
+            self.table_objects["dim_faixa_etaria"] = faixa_etaria_dict
+
+            identificador_socio = session.execute(select(DimIdentificadorSocio)).scalars().all()
+            identificador_socio_dict = {}
+            for item in identificador_socio:
+                cod = item.codigo
+                if cod:
+                    identificador_socio_dict[cod] = item.descricao
+            self.table_objects["dim_identificador_socio"] = identificador_socio_dict
+
+            porte_empresa = session.execute(select(DimPorteEmpresa)).scalars().all()
+            porte_empresa_dict = {}
+            for item in porte_empresa:
+                cod = item.codigo
+                if cod:
+                    porte_empresa_dict[cod] = item.descricao
+            self.table_objects["dim_porte_empresa"] = porte_empresa_dict
+
+            situacao_cadastral = session.execute(select(DimSituacaoCadastral)).scalars().all()
+            situacao_cadastral_dict = {}
+            for item in situacao_cadastral:
+                cod = item.codigo
+                if cod:
+                    situacao_cadastral_dict[cod] = item.descricao
+            self.table_objects["dim_situacao_cadastral"] = situacao_cadastral_dict
+
+            cnae = session.execute(select(Cnae)).scalars().all()
+            cnae_dict = {}
+            for item in cnae:
+                cod = item.codigo
+                if cod:
+                    cnae_dict[cod] = item.descricao
+            self.table_objects["cnae"] = cnae_dict
+
+            motivo = session.execute(select(Motivo)).scalars().all()
+            motivo_dict = {}
+            for item in motivo:
+                cod = item.codigo
+                if cod:
+                    motivo_dict[cod] = item.descricao
+            self.table_objects["motivo"] = motivo_dict
+
+            municipio = session.execute(select(Municipio)).scalars().all()
+            municipio_dict = {}
+            for item in municipio:
+                cod = item.codigo
+                if cod:
+                    municipio_dict[cod] = item.descricao
+            self.table_objects["municipio"] = municipio_dict
+
+            qualificacao_socio = session.execute(select(QualificacaoSocio)).scalars().all()
+            qualificacao_socio_dict = {}
+            for item in qualificacao_socio:
+                cod = item.codigo
+                if cod:
+                    qualificacao_socio_dict[cod] = item.descricao
+            self.table_objects["qualificacao_socio"] = qualificacao_socio_dict
+
+            pais = session.execute(select(Pais)).scalars().all()
+            pais_dict = {}
+            for item in pais:
+                cod = item.codigo
+                if cod:
+                    pais_dict[cod] = item.descricao
+            self.table_objects["pais"] = pais_dict
+
         except Exception as e:
             logging.error("Erro de carga dos objetos em memória")
             logging.error(e)

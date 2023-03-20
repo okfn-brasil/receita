@@ -83,15 +83,16 @@ def process_aux_dim(valor_campo: str, tabela_auxiliar, resposta_cnpj, nome_campo
     Método auxiliar para processar os dados de código e descrição das informações das tabelas auxiliares carregadas em memória
     """
     if valor_campo != "":
-        for item in tabela_auxiliar:
-            if item.codigo == valor_campo:
-                codigo = str(item.codigo)
-                descricao = str(item.descricao)
-                codigo_descricao = f"{codigo} - {descricao}"
+        try:
+            descricao = tabela_auxiliar[valor_campo]
+            if descricao is not None:
+                codigo_descricao = f"{valor_campo} - {descricao}"
                 resposta_cnpj[nome_campo] = codigo_descricao
-                break
-        # Se não encontrou na dimensão, deixa apenas o código original:
-        resposta_cnpj[nome_campo] = valor_campo
+        except Exception as e:
+            # Se não encontrou na dimensão, deixa apenas o código original:
+            logging.error(f"Não foi encontrado código *** {valor_campo} *** no banco de dados para o campo *** {nome_campo} ***.")
+            # Deixa um valor padrão
+            resposta_cnpj[nome_campo] = valor_campo
     else:
         resposta_cnpj[nome_campo] = None
     pass
@@ -150,11 +151,16 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
     sql = sql + f" WHERE empresa.cnpj =  '{cnpj_basico}';"
 
     if cursor is not None:
-        cursor.execute(sql)
-        results = cursor.fetchall()
         # Armazena os campos a serem salvos na tabela de resposta_cnpj
         resposta_cnpj = {}
         campos_cnpj = {}
+        results = None
+        try:
+            cursor.execute(sql)
+            results = cursor.fetchall()
+        except Exception as e:
+            logging.error(f"Erro de carga dos dados da tabela empresa para o CNPJ {cnpj_basico}:")
+            logging.error(e)
         if results is not None and results != []:
             r = results[0]
             campos_cnpj = r.copy()
@@ -164,86 +170,101 @@ def process_resposta_cnpjs_empresa(cnpj_basico: str, cursor=None):
                 str(campos_cnpj["empresa_razao_social"]).replace("'", "`")
             )
 
-            # Dados natureza_juridica
-            empresa_codigo_natureza_juridica = remove_breaks(
-                campos_cnpj["empresa_codigo_natureza_juridica"]
-            )
-
-            # Realizar consulta complementar para a natureza jurídica da empresa:
-            inicializa_resposta_cnpj_campo(
-                resposta_cnpj, "empresa_codigo_natureza_juridica"
-            )
-            process_aux_dim(
-                empresa_codigo_natureza_juridica,
-                aux_tables_data_interface["natureza_juridica"],
-                resposta_cnpj,
-                "empresa_codigo_natureza_juridica",
-            )
-
-            # Implementar select a partir da tabela qualificacao_socio
-            empresa_qualificacao_do_responsavel = remove_breaks(
-                campos_cnpj["empresa_qualificacao_do_responsavel"]
-            )
-            if (
-                empresa_qualificacao_do_responsavel is not None
-                and empresa_qualificacao_do_responsavel != ""
-            ):
-                process_aux_dim(
-                    empresa_qualificacao_do_responsavel,
-                    aux_tables_data_interface["qualificacao_socio"],
-                    resposta_cnpj,
-                    "empresa_qualificacao_do_responsavel",
+            try:
+                # Dados natureza_juridica
+                empresa_codigo_natureza_juridica = remove_breaks(
+                    campos_cnpj["empresa_codigo_natureza_juridica"]
                 )
-            else:
-                resposta_cnpj["empresa_qualificacao_do_responsavel"] = None
+
+                # Realizar consulta complementar para a natureza jurídica da empresa:
+                inicializa_resposta_cnpj_campo(
+                    resposta_cnpj, "empresa_codigo_natureza_juridica"
+                )
+                process_aux_dim(
+                    empresa_codigo_natureza_juridica,
+                    aux_tables_data_interface["natureza_juridica"],
+                    resposta_cnpj,
+                    "empresa_codigo_natureza_juridica",
+                )
+            except Exception as e:
+                logging.error(f"Aconteceu um erro com o processamento dos dados de natureza_juridica")
+                logging.error(e)
+
+            try:
+                # Implementar select a partir da tabela qualificacao_socio
+                empresa_qualificacao_do_responsavel = remove_breaks(
+                    campos_cnpj["empresa_qualificacao_do_responsavel"]
+                )
+                if (
+                    empresa_qualificacao_do_responsavel is not None
+                    and empresa_qualificacao_do_responsavel != ""
+                ):
+                    process_aux_dim(
+                        empresa_qualificacao_do_responsavel,
+                        aux_tables_data_interface["qualificacao_socio"],
+                        resposta_cnpj,
+                        "empresa_qualificacao_do_responsavel",
+                    )
+                else:
+                    resposta_cnpj["empresa_qualificacao_do_responsavel"] = None
+            except Exception as e:
+                logging.error(f"Aconteceu um erro com o processamento dos dados de qualificacao_socio")
+                logging.error(e)
 
             resposta_cnpj["empresa_capital_social"] = remove_breaks(
                 campos_cnpj["empresa_capital_social"]
             )
 
-            # Implement select from dim_porte_empresa
-            empresa_porte = remove_breaks(str(campos_cnpj["empresa_porte"]))
-            if empresa_porte is not None and empresa_porte != "":
-                process_aux_dim(
-                    empresa_porte,
-                    aux_tables_data_interface["dim_porte_empresa"],
-                    resposta_cnpj,
-                    "empresa_porte",
-                )
-            else:
-                resposta_cnpj["empresa_porte"] = None
+            try:
+                # Implement select from dim_porte_empresa
+                empresa_porte = remove_breaks(str(campos_cnpj["empresa_porte"]))
+                if empresa_porte is not None and empresa_porte != "" and empresa_porte != "None":
+                    process_aux_dim(
+                        empresa_porte,
+                        aux_tables_data_interface["dim_porte_empresa"],
+                        resposta_cnpj,
+                        "empresa_porte",
+                    )
+                else:
+                    resposta_cnpj["empresa_porte"] = None
+            except Exception as e:
+                logging.error(f"Aconteceu um erro com o processamento dos dados de empresa_porte")
+                logging.error(e)
 
-            empresa_ente_federativo_responsavel = campos_cnpj[
-                "empresa_ente_federativo_responsavel"
-            ]
-            if empresa_ente_federativo_responsavel is not None:
-                empresa_ente_federativo_responsavel = remove_breaks(
-                    empresa_ente_federativo_responsavel.replace("'", "")
-                )
-                if "None" in empresa_ente_federativo_responsavel:
-                    empresa_ente_federativo_responsavel = None
-            resposta_cnpj[
-                "empresa_ente_federativo_responsavel"
-            ] = empresa_ente_federativo_responsavel
+            try:
+                empresa_ente_federativo_responsavel = campos_cnpj["empresa_ente_federativo_responsavel"]
+                if empresa_ente_federativo_responsavel is not None:
+                    empresa_ente_federativo_responsavel = remove_breaks(
+                        empresa_ente_federativo_responsavel.replace("'", "")
+                    )
+                    if "None" in empresa_ente_federativo_responsavel:
+                        empresa_ente_federativo_responsavel = None
+                resposta_cnpj["empresa_ente_federativo_responsavel"] = empresa_ente_federativo_responsavel
+            except Exception as e:
+                logging.error(f"Aconteceu um erro com o processamento dos dados de ente_federativo_responsavel")
+                logging.error(e)
 
-            # Realizar consulta complementar para buscar os dados de simples:
-            empresa_cnpj = remove_breaks(str(campos_cnpj["empresa_cnpj"]))
-            simples = aux_tables_postgres_interface.get_simples(empresa_cnpj)
-            if simples:
-                resposta_cnpj["simples_opcao_pelo_simples"] = simples.opcao_pelo_simples
-                resposta_cnpj["simples_data_opcao_pelo_simples"] = simples.data_opcao_pelo_simples
-                resposta_cnpj["simples_data_exclusao_pelo_simples"] = simples.data_exclusao_pelo_simples
-                resposta_cnpj["simples_opcao_pelo_mei"] = simples.opcao_pelo_mei
-                resposta_cnpj["simples_data_opcao_pelo_mei"] = simples.data_opcao_pelo_mei
-                resposta_cnpj["simples_data_exclusao_pelo_mei"] = simples.data_exclusao_pelo_mei
-            else:
-                resposta_cnpj["simples_opcao_pelo_simples"] = None
-                resposta_cnpj["simples_data_opcao_pelo_simples"] = None
-                resposta_cnpj["simples_data_exclusao_pelo_simples"] = None
-                resposta_cnpj["simples_opcao_pelo_mei"] = None
-                resposta_cnpj["simples_data_opcao_pelo_mei"] = None
-                resposta_cnpj["simples_data_exclusao_pelo_mei"] = None
-
+            try:
+                # Realizar consulta complementar para buscar os dados de simples:
+                empresa_cnpj = remove_breaks(str(campos_cnpj["empresa_cnpj"]))
+                simples = aux_tables_postgres_interface.get_simples(empresa_cnpj)
+                if simples:
+                    resposta_cnpj["simples_opcao_pelo_simples"] = simples.opcao_pelo_simples
+                    resposta_cnpj["simples_data_opcao_pelo_simples"] = simples.data_opcao_pelo_simples
+                    resposta_cnpj["simples_data_exclusao_pelo_simples"] = simples.data_exclusao_pelo_simples
+                    resposta_cnpj["simples_opcao_pelo_mei"] = simples.opcao_pelo_mei
+                    resposta_cnpj["simples_data_opcao_pelo_mei"] = simples.data_opcao_pelo_mei
+                    resposta_cnpj["simples_data_exclusao_pelo_mei"] = simples.data_exclusao_pelo_mei
+                else:
+                    resposta_cnpj["simples_opcao_pelo_simples"] = None
+                    resposta_cnpj["simples_data_opcao_pelo_simples"] = None
+                    resposta_cnpj["simples_data_exclusao_pelo_simples"] = None
+                    resposta_cnpj["simples_opcao_pelo_mei"] = None
+                    resposta_cnpj["simples_data_opcao_pelo_mei"] = None
+                    resposta_cnpj["simples_data_exclusao_pelo_mei"] = None
+            except Exception as e:
+                logging.error(f"Aconteceu um erro com o processamento dos dados do simples")
+                logging.error(e)
         return resposta_cnpj
     else:
         logging.error("Cursor nulo!")
@@ -327,12 +348,17 @@ def process_resposta_cnpjs_estabelecimento(
     )
 
     if cursor is not None:
-        cursor.execute(sql)
-        results = cursor.fetchall()
         # Armazena os campos a serem salvos na tabela de resposta_cnpj
         resposta_cnpj = {}
         # Objeto auxiliar recebe uma cópia dos campos do resultado da consulta executada no banco
         campos_cnpj = {}
+        try:
+            cursor.execute(sql)
+            results = cursor.fetchall()
+        except Exception as e:
+            logging.error(f"Erro de carga dos dados do estabelecimento {cnpj_basico}:")
+            logging.error(e)
+
         if results is not None and results != []:
             r = results[0]
             campos_cnpj = r.copy()
@@ -400,7 +426,6 @@ def process_resposta_cnpjs_estabelecimento(
             else:
                 resposta_cnpj["estabelecimento_situacao_cadastral"] = None
 
-            # import pdb; pdb.set_trace()
             # Data da situação cadastral do estabelecimento
             estabelecimento_data_situacao_cadastral = campos_cnpj[
                 "estabelecimento_data_situacao_cadastral"
@@ -480,11 +505,11 @@ def process_resposta_cnpjs_estabelecimento(
                         # TODO: substituir aqui com atenção pq contacena vários códigos nesse caso, para múltiplos cnae
                         for cnae_codigo in items:
                             cnaes = aux_tables_data_interface["cnae"]
-                            for cnae in cnaes:
-                                if cnae.codigo == cnae_codigo:
-                                    cnae_cod_desc = f"{cnae.codigo} - {cnae.descricao}"
-                                    # Adiciona à lista de objetos codificado cnae secundário
-                                    items_desc_completa.append(cnae_cod_desc)
+                            cnae = cnaes[cnae_codigo]
+                            if cnae is not None:
+                                cnae_cod_desc = f"{cnae_codigo} - {cnae}"
+                                # Adiciona à lista de objetos codificado cnae secundário
+                                items_desc_completa.append(cnae_cod_desc)
                         # Ao fim do laço, atualiza o valor do campo com uma concatenação de todos os valores da lista, separados por ponto e vírgula
                         cnaes_secundarios_str = ";".join(items_desc_completa)
                         resposta_cnpj[
@@ -924,7 +949,7 @@ if __name__ == "__main__":
     if conn is not None:
         cursor = conn.cursor()
         offset = 0
-        block_size = 1_000
+        block_size = 10_000
         # Dicionário que vai receber os cnpjs já processados, com uma chave por cnpj_basico, cujos valores são uma lista de tuplas (str, str) para ordem e dv já processados
         lista_cnpj_processados = {}
         # Dicionário que vai receber as informações da resposta_cnpj_empresa a ser consolidada com os dados do estabelecimento
@@ -952,7 +977,7 @@ if __name__ == "__main__":
                             for cnpj_basico in chaves:
                                 # Bloco de captura de erro para processamento das respostas
                                 try:
-                                    print(f"↓ Processando cnpj_basico: {cnpj_basico}")
+                                    # print(f"↓ Processando cnpj_basico: {cnpj_basico}")
                                     # Dicionário com os campos a serem salvos e consolidados na tabela resposta_cnpj
                                     resposta_cnpj = None
                                     cnpjs_processados = lista_cnpj_processados.keys()
@@ -1011,14 +1036,17 @@ if __name__ == "__main__":
                                                     ordem = tupla[0]
                                                     dv = tupla[1]
                                                     if ordem and dv:
-                                                        resposta_cnpjs_estabelecimento = process_resposta_cnpjs_estabelecimento(
-                                                            cnpj_basico,
-                                                            ordem,
-                                                            dv,
-                                                            cursor,
-                                                            aux_tables_data_interface,
-                                                        )
-
+                                                        try:
+                                                            resposta_cnpjs_estabelecimento = process_resposta_cnpjs_estabelecimento(
+                                                                cnpj_basico,
+                                                                ordem,
+                                                                dv,
+                                                                cursor,
+                                                                aux_tables_data_interface,
+                                                            )
+                                                        except Exception as e:
+                                                            logging.error(f"Erro no processamento do estabelecimento {cnpj_basico}:")
+                                                            logging.error(e)
                                                         # Caso hajam dados de empresa e estabelecimento, unifica o documento
                                                         if (
                                                             resposta_cnpjs_empresa
