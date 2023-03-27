@@ -467,7 +467,7 @@ create table resposta_socios (
 		faixa_etaria VARCHAR
 );
 
--- Primary keys:
+-- Constraints:
 ALTER TABLE IF EXISTS empresa DROP CONSTRAINT IF EXISTS pk_empresa_id;
 ALTER TABLE empresa ADD CONSTRAINT pk_empresa_id PRIMARY KEY (cnpj);
 ALTER TABLE IF EXISTS cnae DROP CONSTRAINT IF EXISTS pk_cnae_codigo;
@@ -475,7 +475,7 @@ ALTER TABLE cnae ADD CONSTRAINT pk_cnae_codigo PRIMARY KEY (codigo);
 ALTER TABLE IF EXISTS simples DROP CONSTRAINT IF EXISTS pk_simples_id;
 ALTER TABLE simples ADD CONSTRAINT pk_simples_id PRIMARY KEY (cnpj_basico);
 ALTER TABLE IF EXISTS socio DROP CONSTRAINT IF EXISTS pk_socio_id;
-ALTER TABLE IF EXISTS resposta_socios DROP CONSTRAINT IF EXISTS pk_resposta_socios_id;
+ALTER TABLE IF EXISTS resposta_socios ADD CONSTRAINT resposta_socios_unique UNIQUE(cnpj_basico, cnpj_cpf_socio);
 
 -- Foreign Keys:
 -- ALTER TABLE cnae_cnpj ADD CONSTRAINT fk_cnae_cnpj_cnpj FOREIGN KEY (cnpj) REFERENCES empresa (cnpj);
