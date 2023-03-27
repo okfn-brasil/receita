@@ -6,16 +6,16 @@ Este repositório busca facilitar o acesso às informações publicadas pela Rec
 Dessa forma, é possível realizar análises mais profundas com os dados que estão acessíveis através [DESTE SERVIÇO](http://200.152.38.155/CNPJ/). Caso o serviço deixe de estar online ou mude de endereço, o código deverá refletir as alterações. O serviço contém uma listagem com arquivos comprimidos tipo .ZIP que contém, cada um, um arquivo tabular do tipo .CSV (comma-separated-values), representando os dados modelados disponíveis para as seguintes entidades:
 
 
-Empresas
-Estabelecimentos
-Sócios
-CNAEs (Cadastro Nacional de Atividade Empresarial)
-Simples
-Municípios
-Países
-Natureza (Jurídica)
-Qualificações (dos Sócios)
-Motivo (da situação cadastral)
+1. Empresas
+2. Estabelecimentos
+3. Sócios
+4. CNAEs (Cadastro Nacional de Atividade Empresarial)
+5. Simples
+6. Municípios
+7. Países
+8. Natureza (Jurídica)
+9. Qualificações (dos Sócios)
+10. Motivo (da situação cadastral)
 
 Para cada entidade, pode haver um ou mais arquivos .ZIP correspondentes ao total de informações disponíveis na base, ordenados em sequência.
 A relação entre as entidades encontra-se descrita textualmente através do [Arquivo de Layout)](http://200.152.38.155/CNPJ/LAYOUT_DADOS_ABERTOS_CNPJ.pdf) fornecido no próprio endereço e datado de 2018.
