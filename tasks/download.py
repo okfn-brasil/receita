@@ -1,8 +1,10 @@
 import re
 import subprocess
 import os
+import shutil
 import requests
 import time
+import datetime
 from parsel import Selector
 import hashlib
 import logging
@@ -19,7 +21,14 @@ def get_file_name(url):
 # Fluxo principal de execução
 def download_datasets():
     # Configurações de logging
-    logging.basicConfig(filename="download.log", encoding="utf-8", level=logging.DEBUG)
+    logging.basicConfig(
+        handlers=[
+            logging.FileHandler(filename="./download.log", encoding="utf-8", mode="a+")
+        ],
+        format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
+        datefmt="%F %A %T",
+        level=logging.DEBUG,
+    )
     downloaded_datasets = []
     datasets_urls = get_datasets_urls()
     n_files = len(list(datasets_urls.copy()))
@@ -76,6 +85,9 @@ def get_remote_file(url, file_path, retry: bool = False):
         logging.error(e)
         return False
 
+# Retorna uma string com data para o diretório de backups
+def get_current_date():
+    return datetime.datetime.today().strftime('%d-%m-%Y')
 
 # Função simples para verificar se o arquivo existe ou não em disco
 def local_file_exists(file_path):
@@ -101,11 +113,40 @@ def retry_download(url, file_path, retry: bool = False):
             )
 
 
-def get_file_path(file_name: str):
+def get_file_path(file_name: str, last_modified: str):
+    """
+        Verifica se o nome de arquivo e data fornecidos correspondem a um diretório e arquivos já existentes.
+    """
     # full path to file
-    file_path = "../data/" + file_name
+    file_path = os.path.join("../data/", [last_modified, "/", file_name])
     return file_path
 
+# @querido-diario-data-processing:
+# from storage import create_storage_interface
+# storage: StorageInterface,
+# storage = create_storage_interface()
+
+def upload_gazette_raw_text(gazette, storage):
+    """
+    Define gazette raw text
+    """
+    file_raw_txt = Path(gazette["file_path"]).with_suffix(".txt").as_posix()
+    storage.upload_content(file_raw_txt, gazette["source_text"])
+    logging.debug(f"file_raw_txt uploaded {file_raw_txt}")
+    file_endpoint = get_file_endpoint()
+    gazette["file_raw_txt"] = f"{file_endpoint}/{file_raw_txt}"
+
+def create_directory(backup_file_path: str, newdir_name: str):
+    # Cria o novo diretório de backup
+    backup_dir_full_path = None
+    try:
+        backup_dir_full_path = os.path.join(backup_file_path, newdir_name)
+        os.mkdir(backup_dir_full_path)
+        return backup_dir_full_path
+    except Exception as e:
+        print(f"Erro de criação de diretórios: {backup_dir_full_path}")
+        print(e)
+        return None
 
 # Se o arquivo já existir e for o mesmo que o arquivo remoto, não baixa e retorna False
 # Caso o arquivo local seja diferente do remoto, ou se não existir em disco, baixar arquivo
@@ -113,8 +154,6 @@ def download_file(url: str, retry: bool = False):
     # get file name
     file_name = get_file_name(url)
     logging.info(f"Baixando arquivo {file_name}")
-    # full path to file
-    file_path = get_file_path(file_name)
     # Objeto para armazenar os metadados do arquivo remoto
     info = None
     # Verifica metadados do arquivo remoto para comparação
@@ -125,48 +164,80 @@ def download_file(url: str, retry: bool = False):
         logging.error(
             f"→ Erro de verificação preventiva de metadados do arquivo {file_name}."
         )
-    # Conseguiu a informação sobre o arquivo remoteo
+    # Conseguiu a informação sobre o arquivo remoto
     if info:
         remote_file_size = info.headers["Content-Length"]
+        remote_file_date = info.headers["Last-Modified"]
         if remote_file_size:
             logging.info(f"Tamanho do arquivo remoto: {remote_file_size} bytes")
             # Caso exista arquivo anterior, calcular checksum e comparar
-            logging.info(f"Arquivo a verificar em disco: {file_path}")
-            if local_file_exists(file_path):
-                local_file_size = str(os.path.getsize(file_path))
-                if local_file_size:
-                    logging.info(
-                        f"Tamanho do arquivo em disco: {remote_file_size} bytes"
-                    )
-                    # Para garantir a integridade entre cargas, será implementada uma verificação do tamanho do arquivo remoto
-                    # contra o arquivo baixado anteriormente, ainda em disco, através do checksum
-                    local_file_hash = generate_sha256_checksum(
-                        file_name, local_file_size
-                    )
-                    remote_file_hash = generate_sha256_checksum(
-                        file_name, remote_file_size
-                    )
-                    # Arquivos com tamanhos o nomes diferentes, houve alguma mudança nos arquivos. Substitui o velho pelo novo.
-                    if local_file_hash != remote_file_hash:
-                        # TODO: Aqui, ao invés de deletar o antigo, vai armazenar o antigo em outro diretório no Spaces e manter o novo
-                        logging.info(
-                            "O arquivo local em disco e o arquivo remoto tem tamanhos diferentes, ou mudaram de nome. Removendo o arquivo local e baixa do servidor."
-                        )
-                        # Remove o arquivo antigo
-                        try:
-                            os.remove(file_path)
-                        except Exception as e:
-                            logging.error(
-                                f"Erro! Não foi possível remover arquivo {file_name}"
+            # TODO: usar a data além do tamanho para gerar o checksum
+            if remote_file_date:
+                remote_file_date_obj = datetime.datetime.strptime(remote_file_date, '%a, %d %b %Y %H:%M:%S %Z')
+                remote_file_date_formated = datetime.datetime.strftime(remote_file_date_obj, '%d-%m-%Y')
+                logging.info(f"→→→ Data da última modificação do arquivo no servidor: {remote_file_date}")
+                logging.info(f"→→→ Data formatada: {remote_file_date_formated}")
+                # verificar se o diretório atual /data/dd-mm-yyyy existe
+                expected_path = "../data/" + remote_file_date_formated
+                # diretório atual /data/dd-mm-yyyy existe
+                if local_file_exists(expected_path):
+                    file_path = get_file_path(file_name, remote_file_date_formated)
+                    logging.info(f"Arquivo a verificar em disco: {file_path}")
+                    file_path_exists = local_file_exists(file_path)
+                    if file_path_exists:
+                        local_file_size = str(os.path.getsize(file_path))
+                        if local_file_size:
+                            logging.info(
+                                f"Tamanho do arquivo em disco: {remote_file_size} bytes"
                             )
-                            logging.error(e)
-                        # Realiza a chamada para baixar o novo arquivo
-                        return get_remote_file(url, file_path, retry)
-                    else:
-                        logging.error(
-                            "O arquivo já existe em disco e não sofreu alterações, portanto não é necessário baixar novamente."
-                        )
-                        return False
+
+                            # Para garantir a integridade entre cargas, será implementada uma verificação do tamanho e do nome do arquivo remoto
+                            # contra o arquivo baixado anteriormente, ainda em disco, através do checksum
+                            local_file_hash = generate_sha256_checksum(
+                                file_name, local_file_size
+                            )
+                            remote_file_hash = generate_sha256_checksum(
+                                file_name, remote_file_size
+                            )
+                            # Arquivos com tamanhos diferentes, houve alguma mudança nos arquivos. Substitui o velho pelo novo e salva o arquivo antigo na pasta de backups.
+                            print(f"→→→ Hash ckeck: [LOCAL] {local_file_hash} | [REMOTE] {remote_file_hash}")
+                            if local_file_hash != remote_file_hash:
+                                # Armazenar o arquivo antigo em outro diretório e mantém o novo
+                                logging.info(
+                                    "O arquivo local em disco e o arquivo remoto tem tamanhos diferentes. Movendo o arquivo local para backups (/bkp) e baixando novo arquivo do servidor."
+                                )
+                                # Cria um diretório com a data do processamento e move para o diretório os arquivos antigos
+                                try:
+                                    # Caminho para salvar em disco os arquivos antigos
+                                    backup_file_path = '../data/bkp/'
+                                    # Cria o novo diretório com o nome referente À data atual do processamento e a data da última modificação do arquivo.
+                                    new_backup_dir = create_directory(backup_file_path, remote_file_date_formated)
+                                    # Se o diretório for criado com sucesso, move os arquivos
+                                    if new_backup_dir:
+                                        print(f"→→→ new backup directory: {new_backup_dir}")
+                                        # Junta o caminho do novo diretório ao nome do arquivo, criando o caminho completo para o novo arquivo
+                                        new_backup_file_path = os.path.join(new_backup_dir, file_name)
+                                        try:
+                                            # Substitui os arquivos, movendo-os
+                                            shutil.move(file_path, new_backup_file_path)
+                                            logging.info(f"Arquivo {file_name} armazenado corretamente no diretório de backups {new_backup_dir}")
+                                        except Exception as e:
+                                            print("Erro na movimentação de arquivo para diretório de backup.")
+                                            print(e)
+                                    else:
+                                        logging.error("Não foi possível criar diretório. Impossível salvar arquivos antigos.")
+                                except Exception as e:
+                                    logging.error(
+                                        f"Erro! Não foi possível mover arquivo {file_name} para {new_backup_file_path}"
+                                    )
+                                    logging.error(e)
+                                # Realiza a chamada para baixar o novo arquivo
+                                return get_remote_file(url, file_path, retry)
+                            else:
+                                logging.error(
+                                    "O arquivo já existe em disco e não sofreu alterações, portanto não é necessário baixar novamente."
+                                )
+                                return False
             else:
                 logging.info("Arquivo não existe no disco, é necessário baixar.")
                 return get_remote_file(url, file_path, retry)
