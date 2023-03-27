@@ -36,9 +36,9 @@ O estabelecimento possui informações complementares às informações de empre
 
 Este projeto está dividido portanto em três fases fundamentais, de acordo com o fluxo normal de processos de ETL (Extract, Transform, Load). Neste escopo, o fluxo pode ser definido como:
 
-Baixar os arquivos do serviço online
-Carregar os arquivos tabulares como dados brutos estruturando-os em tabelas no banco de dados
-Processar os dados disponíveis nas tabelas, realizando validação, formatação e limpeza, produzindo um documento único chamado **resposta_cnpj** que consolida em uma tabela os dados de CNPJ de estabelecimentos e empresas, bem como em outra chamada **resposta_socio** que consolida os dados do quadro de sócios, que é aquilo que está disponibilizado para o usuário final através dos pontos de acesso de estabelecimentos e de sócios da API do Querido Diário.
+1. Baixar os arquivos do serviço online
+2. Carregar os arquivos tabulares como dados brutos estruturando-os em tabelas no banco de dados
+3. Processar os dados disponíveis nas tabelas, realizando validação, formatação e limpeza, produzindo um documento único chamado **resposta_cnpj** que consolida em uma tabela os dados de CNPJ de estabelecimentos e empresas, bem como em outra chamada **resposta_socio** que consolida os dados do quadro de sócios, que é aquilo que está disponibilizado para o usuário final através dos pontos de acesso de estabelecimentos e de sócios da API do Querido Diário.
 
 ## :: Instalação ::
 
