@@ -22,7 +22,16 @@ import logging
 
 # Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .zip
 mapeamento_tabelas_zip = {
+    "empresa": "Empresas",  # "Empresas",
     "estabelecimento": "Estabelecimentos",  # "Estabelecimentos",
+    "simples": "Simples",
+    "socio": "Socios",
+    "pais": "Paises",  # "Paises",
+    "municipio": "Municipios",  # "Municipios",
+    "qualificacao_socio": "Qualificacoes",
+    "natureza_juridica": "Naturezas",  # "Naturezas",
+    "cnae": "Cnaes",  # "Cnaes",
+    "motivo": "Motivos",  # "Motivos"
 }
 
 # Mapeamento entre os nomes das tabelas no banco e uma referência ao nome do arquivo em disco para os arquivos .csv
@@ -112,7 +121,7 @@ mapeamento_nome_campos = {
     "motivo": {"codigo": "str", "descricao": "str"},
 }
 
-# Dicionário utilizado para armazenar a contagem de registros a carregar e os carregados
+# Dicionário utilizado para armazenar a contagem de registros a carregar e os carregados para a execução
 n_registros_carregados = {
     "empresa": {"n_items_csv": None, "n_carregados": None},
     "estabelecimento": {"n_items_csv": None, "n_carregados": None},
@@ -359,7 +368,7 @@ def ingest_datasets():
     sql_engine = None
     try:
         # Remember to set here
-        db_password = "postgres"
+        db_password = "change HERE"
         # Adding pass to the connection string
         db_url = f"postgresql://postgres:{db_password}@localhost:5432/qd_receita"
         sql_engine = create_engine(db_url, isolation_level="AUTOCOMMIT")
