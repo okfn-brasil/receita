@@ -27,7 +27,7 @@ As regras de negócio do Cadastro Nacional de Pessoa Jurídica (CNPJ) podem ser 
 Além do CNPJ base, a empresa, quando criada, possui apenas o estabelecimento matriz, que recebe um **código de 4 dígitos**, conhecido como **ordem do CNPJ**, que era normalmente sequencial, iniciando em **0001**. Além disso, o estabelecimento recebe um terceiro código de 2 **dígitos conhecido como dígito verificador**, gerado através de um algoritmo da Receita que calcula uma espécie de código hash utilizando a combinação cnpj base e ordem, gerando assim o dígito verificador.
 Assim, uma empresa pode possuir múltiplos estabelecimentos, todos compartilhando o mesmo cnpj base, entretanto cada estabelecimento com um código de ordem individual e um dígito verificador correspondente.
 O estabelecimento possui informações complementares às informações de empresa, definidos pelas outras entidades a que chamaremos de **dimensões complementares**. Segue abaixo a sugestão adotada para a modelagem das tabelas no projeto:
-![Modelo de tabelas do banco](docs/static/image/Entity Relationship Diagram.png)
+![Modelo de tabelas do banco](https://github.com/okfn-brasil/receita/raw/revisao/docs/static/img/Entity%20Relationship%20Diagram.png)
 
 
 
