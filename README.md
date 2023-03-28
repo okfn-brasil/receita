@@ -38,7 +38,7 @@ Este projeto está dividido portanto em três fases fundamentais, de acordo com 
 
 1. Baixar os arquivos do serviço online
 2. Carregar os arquivos tabulares como dados brutos estruturando-os em tabelas no banco de dados
-3. Processar os dados disponíveis nas tabelas, realizando validação, formatação e limpeza, produzindo um documento único chamado **resposta_cnpj** que consolida em uma tabela os dados de CNPJ de estabelecimentos e empresas, bem como em outra chamada **resposta_socio** que consolida os dados do quadro de sócios, que é aquilo que está disponibilizado para o usuário final através dos pontos de acesso de estabelecimentos e de sócios da API do Querido Diário.
+3. Processar os dados disponíveis nas tabelas, realizando validação, formatação e limpeza, produzindo um documento único chamado **resposta_cnpj** que consolida em uma tabela os dados de CNPJ de estabelecimentos e empresas, bem como em outra chamada **resposta_socio** que consolida os dados do quadro de sócios, que é aquilo que está disponibilizado para o usuário final através dos pontos de acesso de [estabelecimentos](https://queridodiario.ok.org.br/api/docs#/default/Get_company_info_by_CNPJ_number_company_info__cnpj__get) e de [sócios](https://queridodiario.ok.org.br/api/docs#/default/Get_company_partners_infos_by_CNPJ_number_company_partners__cnpj__get) da API do Querido Diário.
 
 ## :: Instalação ::
 
@@ -77,5 +77,5 @@ $ python3 process_cnpjs.py
 
 Os dados da RFB, após processados pela OKBR utilizando este fluxo, podem ser acessados online gratuitamente através dos seguintes pontos de acesso da API pública do Querido Diário:
 
-Endpoint de estabelecimentos
-Endpoint de sócios
+* [Endpoint de estabelecimentos](https://queridodiario.ok.org.br/api/docs#/default/Get_company_info_by_CNPJ_number_company_info__cnpj__get)
+* [Endpoint de sócios](https://queridodiario.ok.org.br/api/docs#/default/Get_company_partners_infos_by_CNPJ_number_company_partners__cnpj__get)
