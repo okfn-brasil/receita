@@ -3,31 +3,6 @@
 -- Para executar via linha de comando shell/bash:
 	-- psql -U postgres -d qd_receita -h localhost -f caminho/nomedoarquivo.sql
 
--- Gerenciar as operações relativas às Empresas (CNPJ)
-drop table if exists empresa;
-create table empresa (
-	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (OITO PRIMEIROS DÍGITOS DO CNPJ).
-	cnpj VARCHAR(15) PRIMARY KEY,
-	-- NOME EMPRESARIAL DA PESSOA JURÍDICA
-	razao_social VARCHAR,
-	-- CÓDIGO DA NATUREZA JURÍDICA
-	codigo_natureza_juridica VARCHAR(4),
-	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
-	qualificacao_do_responsavel VARCHAR(2),
-	-- CAPITAL SOCIAL DA EMPRESA
-	capital_social VARCHAR,
-	-- CÓDIGO DO PORTE DA EMPRESA:
-		-- 00 - NÃO INFORMADO
-		-- 01 - MICRO EMPRESA
-		-- 03 - EMPRESA DE PEQUENO PORTE
-		-- 05 - DEMAIS
-	porte VARCHAR,
-	-- O ENTE FEDERATIVO RESPONSÁVEL É PREENCHIDO PARA OS CASOS DE ÓRGÃOS E ENTIDADES DO GRUPO DE NATUREZA JURÍDICA.
-	-- PARA AS DEMAIS NATUREZAS, ESTE ATRIBUTO FICA EM BRANCO.
-	-- OBS.: Corresponde ao par cidade - uf
-	ente_federativo_responsavel VARCHAR
-);
-
 -- Gerenciar as operações relativas aos Estabelecimentos (CNPJ)
 drop table if exists estabelecimento;
 create table estabelecimento (
@@ -38,6 +13,8 @@ create table estabelecimento (
 	cnpj_ordem VARCHAR(4),
 	-- DÍGITO VERIFICADOR DO NÚMERO DE INSCRIÇÃO NO CNPJ (DOIS ÚLTIMOS DÍGITOS DO CNPJ).
 	cnpj_dv VARCHAR(2),
+	-- Chave primária é uma combinação das três colunas anteriores
+	UNIQUE(cnpj_basico, cnpj_ordem, cnpj_dv),
 	-- CÓDIGO DO IDENTIFICADOR MATRIZ/FILIAL:
 		-- 1 - MATRIZ
 		-- 2 - FILIAL
@@ -54,7 +31,7 @@ create table estabelecimento (
 	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
 	data_situacao_cadastral VARCHAR(10),
 	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
-	motivo_situacao_cadastral VARCHAR(11),
+	motivo_situacao_cadastral VARCHAR(100),
 	-- NOME DA CIDADE NO EXTERIOR
 	nome_cidade_exterior VARCHAR,
 	-- CÓDIGO DO PAIS
@@ -99,6 +76,32 @@ create table estabelecimento (
 	situacao_especial VARCHAR,
 	-- DATA EM QUE A EMPRESA ENTROU EM SITUAÇÃO ESPECIAL
 	data_situacao_especial VARCHAR(10)
+);
+
+
+-- Gerenciar as operações relativas às Empresas (CNPJ)
+drop table if exists empresa;
+create table empresa (
+	-- NÚMERO BASE DE INSCRIÇÃO NO CNPJ (OITO PRIMEIROS DÍGITOS DO CNPJ).
+	cnpj VARCHAR(8),
+	-- NOME EMPRESARIAL DA PESSOA JURÍDICA
+	razao_social VARCHAR,
+	-- CÓDIGO DA NATUREZA JURÍDICA
+	codigo_natureza_juridica VARCHAR(4),
+	-- QUALIFICAÇÃO DA PESSOA FÍSICA RESPONSÁVEL PELA EMPRESA
+	qualificacao_do_responsavel VARCHAR(2),
+	-- CAPITAL SOCIAL DA EMPRESA
+	capital_social VARCHAR,
+	-- CÓDIGO DO PORTE DA EMPRESA:
+		-- 00 - NÃO INFORMADO
+		-- 01 - MICRO EMPRESA
+		-- 03 - EMPRESA DE PEQUENO PORTE
+		-- 05 - DEMAIS
+	porte VARCHAR,
+	-- O ENTE FEDERATIVO RESPONSÁVEL É PREENCHIDO PARA OS CASOS DE ÓRGÃOS E ENTIDADES DO GRUPO DE NATUREZA JURÍDICA.
+	-- PARA AS DEMAIS NATUREZAS, ESTE ATRIBUTO FICA EM BRANCO.
+	-- OBS.: Corresponde ao par cidade - uf
+	ente_federativo_responsavel VARCHAR
 );
 
 -- Gerenciar os Dados do Simples Nacional
@@ -196,7 +199,7 @@ insert into pais values ('873', 'Wake, Ilha');
 drop table if exists municipio;
 create table municipio (
 	-- CÓDIGO DO MUNICÍPIO
-	codigo VARCHAR(3),
+	codigo VARCHAR(4),
 	-- NOME DO MUNICÍPIO
 	descricao VARCHAR
 );
@@ -224,6 +227,15 @@ drop table if exists cnae;
 create table cnae (
 	-- CÓDIGO DA ATIVIDADE ECONÔMICA
 	codigo VARCHAR(7),
+	-- NOME DA ATIVIDADE ECONÔMICA
+	descricao VARCHAR
+);
+
+-- Gerenciar as operações relativas aos Motivos da Situação cadastral das Empresas
+drop table if exists motivo;
+create table motivo (
+	-- CÓDIGO DA ATIVIDADE ECONÔMICA
+	codigo VARCHAR(3),
 	-- NOME DA ATIVIDADE ECONÔMICA
 	descricao VARCHAR
 );
@@ -328,7 +340,7 @@ create table resposta_cnpj (
  	-- DATA DO EVENTO DA SITUAÇÃO CADASTRAL
  	estabelecimento_data_situacao_cadastral VARCHAR(15),
  	-- CÓDIGO DO MOTIVO DA SITUAÇÃO CADASTRAL
- 	estabelecimento_motivo_situacao_cadastral VARCHAR(11),
+ 	estabelecimento_motivo_situacao_cadastral VARCHAR(100),
  	-- NOME DA CIDADE NO EXTERIOR
  	estabelecimento_nome_cidade_exterior VARCHAR,
  	-- DATA DE INÍCIO DA ATIVIDADE
@@ -455,18 +467,15 @@ create table resposta_socios (
 		faixa_etaria VARCHAR
 );
 
--- Primary keys:
+-- Constraints:
 ALTER TABLE IF EXISTS empresa DROP CONSTRAINT IF EXISTS pk_empresa_id;
 ALTER TABLE empresa ADD CONSTRAINT pk_empresa_id PRIMARY KEY (cnpj);
 ALTER TABLE IF EXISTS cnae DROP CONSTRAINT IF EXISTS pk_cnae_codigo;
 ALTER TABLE cnae ADD CONSTRAINT pk_cnae_codigo PRIMARY KEY (codigo);
-ALTER TABLE IF EXISTS estabelecimento DROP CONSTRAINT IF EXISTS pk_estabelecimento_id;
-ALTER TABLE estabelecimento ADD CONSTRAINT pk_estabelecimento_id PRIMARY KEY (cnpj);
 ALTER TABLE IF EXISTS simples DROP CONSTRAINT IF EXISTS pk_simples_id;
 ALTER TABLE simples ADD CONSTRAINT pk_simples_id PRIMARY KEY (cnpj_basico);
 ALTER TABLE IF EXISTS socio DROP CONSTRAINT IF EXISTS pk_socio_id;
-ALTER TABLE socio ADD CONSTRAINT pk_socio_id PRIMARY KEY (cnpj_basico);
-ALTER TABLE IF EXISTS resposta_socios DROP CONSTRAINT IF EXISTS pk_resposta_socios_id;
+ALTER TABLE IF EXISTS resposta_socios ADD CONSTRAINT resposta_socios_unique UNIQUE(cnpj_basico, cnpj_cpf_socio);
 
 -- Foreign Keys:
 -- ALTER TABLE cnae_cnpj ADD CONSTRAINT fk_cnae_cnpj_cnpj FOREIGN KEY (cnpj) REFERENCES empresa (cnpj);
@@ -478,6 +487,7 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cnae_descricao ON cnae (descricao);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnpj ON estabelecimento (cnpj_basico);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_simples_cnpj_basico ON simples (cnpj_basico);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_socio_cnpj_basico ON socio (cnpj_basico);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnpj ON estabelecimento (cnpj_basico, cnpj_ordem, cnpj_dv);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_cnae_fiscal ON estabelecimento (cnae_fiscal);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_local ON estabelecimento (uf, municipio, bairro);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_estabelecimento_situacao_cadastral ON estabelecimento (situacao_cadastral);
