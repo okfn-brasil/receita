@@ -34,8 +34,9 @@ O estabelecimento possui informações complementares às informações de empre
 
 Este projeto está dividido portanto em três fases fundamentais, de acordo com o fluxo normal de processos de ETL (Extract, Transform, Load). Neste escopo, o fluxo pode ser definido como:
 
-1. Baixar os arquivos do serviço online
-2. Carregar os arquivos tabulares como dados brutos estruturando-os em tabelas no banco de dados
+0. Preparar o banco de dados PostgreSQL executando o [arquivo inicial de configuração do banco](sql/starqtdb.sql);
+1. Verificar se os arquivos foram atualizados no servidor; Baixar os arquivos do serviço online, salvando os arquivos antigos em diretório local; Descompactar os arquivos .CSV de dentro dos arquivos .ZIP baixados;
+2. Carregar os arquivos tabulares como dados brutos estruturando-os em tabelas no banco de dados PostgreSQL;
 3. Processar os dados disponíveis nas tabelas, realizando validação, formatação e limpeza, produzindo um documento único chamado **resposta_cnpj** que consolida em uma tabela os dados de CNPJ de estabelecimentos e empresas, bem como em outra chamada **resposta_socio** que consolida os dados do quadro de sócios, que é aquilo que está disponibilizado para o usuário final através dos pontos de acesso de [estabelecimentos](https://queridodiario.ok.org.br/api/docs#/default/Get_company_info_by_CNPJ_number_company_info__cnpj__get) e de [sócios](https://queridodiario.ok.org.br/api/docs#/default/Get_company_partners_infos_by_CNPJ_number_company_partners__cnpj__get) da API do Querido Diário.
 
 ## :: Instalação ::
