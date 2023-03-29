@@ -43,7 +43,14 @@ Este projeto está dividido portanto em três fases fundamentais, de acordo com 
 
 ## Dependências
 
-Para instalar o projeto, utilize Python 3+. Recomenda-se a criação e ativação de um ambiente virtual python. Basta acessar o diretório do projeto
+Para instalar o projeto, utilize Python 3+. Recomenda-se a criação e ativação de um ambiente virtual python. 
+
+```
+$ python3 -m venv meu_ambiente
+$ source meu_ambiente/bin/activate
+```
+
+Para instalar as dependências, basta acessar o diretório do projeto e instalar com pip:
 
 ```
 $ cd receita
@@ -54,7 +61,7 @@ Caso aconteça algum erro de instalação das dependências, verifique se está 
 
 ## Banco de dados
 
-A escolha para o projeto é a alternativa PostgreSQL. Uma vez instalado na sua máquina. Para a criação do banco de dados PostgreSQL local "localhost" via linha de comando (shell/bash/etc), dando permissão a um usuário chamado "postgres", à base "qd_receita", basta seguir as orientações no cabeçalho do próprio arquivo:
+A escolha de SGBD para o projeto é a alternativa PostgreSQL. Uma vez instalado o cliente psql e inicializado o servidor postgres na sua máquina, realize a criação das tabelas e relações do banco de dados PostgreSQL local "localhost" via linha de comando (shell/bash/etc), dando permissão a um usuário chamado "postgres" e a uma base chamada "qd_receita". Basta seguir as orientações no cabeçalho do próprio arquivo [startdb.sql](sql/startdb.sql):
 
 ```
 $ psql -U postgres -d qd_receita -h localhost -f sql/startdb.sql
@@ -78,7 +85,8 @@ i) Executa o script que baixa os arquivos .ZIP, caso sejam uma versão mais nova
 $ python3 download.py
 ```
 
-ii) Realiza a extração dos arquivos tabulares de dentro dos arquivos .ZIP, carregando os dados  em memória por bloco para cada entidade e persistindo a informação original (raw) em tabelas do banco de dados
+ii) Realiza a extração dos arquivos tabulares de dentro dos arquivos .ZIP, carregando os dados  em memória por bloco para cada entidade e persistindo a informação original (raw) em tabelas do banco de dados.
+
 ```
 $ python3 ingest.py
 ```
