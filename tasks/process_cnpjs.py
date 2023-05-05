@@ -844,9 +844,20 @@ def process_resposta_socios(cnpj_basico: str, cursor=None):
                 resposta_socios["socio_nome_representante_legal"] = campos_socios[
                     "socio_nome_representante_legal"
                 ]
-                resposta_socios[
-                    "socio_codigo_qualificacao_representante_legal"
-                ] = campos_socios["socio_codigo_qualificacao_representante_legal"]
+                
+                socio_codigo_qualificacao_representante_legal = campos_socios["socio_codigo_qualificacao_representante_legal"]
+                    if socio_codigo_qualificacao_socio is not None:
+                        process_aux_dim(
+                            socio_codigo_qualificacao_representante_legal,
+                            aux_tables_data_interface["qualificacao_socio"],
+                            resposta_socios,
+                            "socio_codigo_qualificacao_representante_legal",
+                        )
+                    else:
+                        resposta_socios[
+                            "socio_codigo_qualificacao_representante_legal"
+                        ] = None
+
 
                 # Select from dim_faixa_etaria
                 faixa_etaria = str(campos_socios["socio_faixa_etaria"])
