@@ -1,2 +1,3 @@
 parsel
 requests
+boto3

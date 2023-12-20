@@ -1,13 +1,18 @@
-import re
-import subprocess
-import os
-import shutil
-import requests
-import time
 import datetime
-from parsel import Selector
 import hashlib
 import logging
+import os
+import pathlib
+import re
+import requests
+import shutil
+import subprocess
+import time
+
+import boto3
+from botocore.config import Config
+from parsel import Selector
+
 
 # Retorna o nome do arquivo a partir da URL completa
 def get_file_name(url):
@@ -29,17 +34,43 @@ def download_datasets():
         datefmt="%F %A %T",
         level=logging.DEBUG,
     )
-    downloaded_datasets = []
     datasets_urls = get_datasets_urls()
     n_files = len(list(datasets_urls.copy()))
     logging.info(f"Existem {n_files} arquivos a baixar")
     for url in datasets_urls.copy():
         logging.info(url)
-    for url in datasets_urls:
-        is_file_downloaded = download_file(url)
-        if is_file_downloaded:
-            downloaded_datasets.append(url)
+
+    datasets = [download_file(url) for url in datasets_urls]
+    downloaded_datasets = [d for d in datasets if is_dataset_downloaded(d)]
+
+    if not downloaded_datasets:
+        logging.info("Nenhum dataset foi baixado.")
+        return
+
     logging.info(f"Foram baixados {len(downloaded_datasets)} arquivos.")
+    for downloaded_status, dataset_file in datasets:
+        logging.info(f"Arquivo {dataset_file} foi baixado agora? {downloaded_status}.\nRealizando backup...")
+        backup_dataset(dataset_file)
+
+
+def backup_dataset(file_to_backup):
+    s3 = boto3.resource('s3',
+        region_name=os.getenv('AWS_DEFAULT_REGION'),
+        endpoint_url=os.getenv('AWS_ENDPOINT_URL'),
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+    )
+    bucket_name = os.getenv('STORAGE_BUCKET')
+    bucket = s3.Bucket(bucket_name)
+
+    today_isoformat = get_current_date()
+    file_path = pathlib.Path(file_to_backup_path)
+    backup_key = f"backups/{today_isoformat}/{file_path.parent.name}/{file_path.name}"
+    bucket.upload_file(file_to_backup, backup_key, ExtraArgs={'ACL': 'public-read'})
+
+
+def is_dataset_downloaded(dataset_info):
+    return dataset_info[0]
 
 
 # Método que varre a página html que contém a lista de arquivos .zip com o dump do banco de dados de CNPJs da Receita Federal, retornando uma lista com os resultados
@@ -87,7 +118,7 @@ def get_remote_file(url, file_path, retry: bool = False):
 
 # Retorna uma string com data para o diretório de backups
 def get_current_date():
-    return datetime.datetime.today().strftime('%d-%m-%Y')
+    return datetime.datetime.today().strftime('%Y-%m-%d')
 
 # Função simples para verificar se o arquivo existe ou não em disco
 def local_file_exists(file_path):
@@ -174,12 +205,12 @@ def download_file(url: str, retry: bool = False):
             # TODO: usar a data além do tamanho para gerar o checksum
             if remote_file_date:
                 remote_file_date_obj = datetime.datetime.strptime(remote_file_date, '%a, %d %b %Y %H:%M:%S %Z')
-                remote_file_date_formated = datetime.datetime.strftime(remote_file_date_obj, '%d-%m-%Y')
+                remote_file_date_formated = datetime.datetime.strftime(remote_file_date_obj, '%Y-%m-%d')
                 logging.info(f"→→→ Data da última modificação do arquivo no servidor: {remote_file_date}")
                 logging.info(f"→→→ Data formatada: {remote_file_date_formated}")
-                # verificar se o diretório atual /data/dd-mm-yyyy existe
+                # verificar se o diretório atual /data/yyyy-mm-dd existe
                 expected_path = "../data/" + remote_file_date_formated
-                # diretório atual /data/dd-mm-yyyy existe
+                # diretório atual /data/yyyy-mm-dd existe
                 if local_file_exists(expected_path):
                     file_path = get_file_path(file_name, remote_file_date_formated)
                     logging.info(f"Arquivo a verificar em disco: {file_path}")
@@ -232,22 +263,21 @@ def download_file(url: str, retry: bool = False):
                                     )
                                     logging.error(e)
                                 # Realiza a chamada para baixar o novo arquivo
-                                return get_remote_file(url, file_path, retry)
+                                return get_remote_file(url, file_path, retry), file_path
                             else:
                                 logging.error(
                                     "O arquivo já existe em disco e não sofreu alterações, portanto não é necessário baixar novamente."
                                 )
-                                return False
+                                return False, file_path
             else:
                 logging.info("Arquivo não existe no disco, é necessário baixar.")
-                return get_remote_file(url, file_path, retry)
+                return get_remote_file(url, file_path, retry), file_path
     # Não foi possível pegar metadados preventivamente, considera não existente e baixa o novo arquivo
     else:
         logging.info(
             f"Não foi possível carregar preventivamente os metadados do arquivo {file_name}. Baixar arquivo."
         )
-        return get_remote_file(url, file_path, retry)
-    pass
+        return get_remote_file(url, file_path, retry), file_path
 
 
 if __name__ == "__main__":
